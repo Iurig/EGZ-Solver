@@ -42,12 +42,7 @@ R e_m(sequence<R> &S, int m) {
   if (S.size() == 1) return S.element();
   if (memorized_e_m[m].find(S.hash()) != memorized_e_m[m].end())
     return memorized_e_m[m][S.hash()];
-  return calc_e_m(S, m);
-}
 
-// Auxiliary function to e_m
-template <typename R>
-R calc_e_m(sequence<R> &S, int m) {
   R x = S.element();
 
   S.remove(x);
