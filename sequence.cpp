@@ -5,17 +5,12 @@ class sequence {
  public:
   static constexpr int n = R::order;
   sequence() { c = vector<int>(n); }
-  R first() {
-    for (int i = 0; i < n; i++)
-      if (c[i] != 0) return R(i);
-    return R();
-  }
-  R last() {
+  R element() {
     for (int i = n - 1; i >= 0; i--)
       if (c[i] != 0) return R(i);
     return R();
   }
-  void erase(const R &x, int a = 1) {
+  void remove(const R &x, int a = 1) {
     _size -= a;
     c[x.value] -= a;
   }

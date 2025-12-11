@@ -39,7 +39,7 @@ template <typename R>
 R e_m(sequence<R> &S, int m) {
   if (m == 0) return R::unit;
   if (m > S.size()) return 0;
-  if (S.size() == 1) return S.first();
+  if (S.size() == 1) return S.element();
   if (memorized_e_m[m].find(S.hash()) != memorized_e_m[m].end())
     return memorized_e_m[m][S.hash()];
   return calc_e_m(S, m);
@@ -48,9 +48,9 @@ R e_m(sequence<R> &S, int m) {
 // Auxiliary function to e_m
 template <typename R>
 R calc_e_m(sequence<R> &S, int m) {
-  R x = S.last();
+  R x = S.element();
 
-  S.erase(x);
+  S.remove(x);
   R blah = x * e_m(S, m - 1) + e_m(S, m);
   S.insert(x);
 
@@ -70,7 +70,7 @@ bool checkSubsets(int t, int m, sequence<R> &S, int minimum = 0) {
       break;
     else {
       removed++;
-      S.erase(minimum);
+      S.remove(minimum);
     }
   }
   S.insert(minimum, removed);
