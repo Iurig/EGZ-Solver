@@ -6,8 +6,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-
-#include "rings.cpp"
+#include <assert.h>
 
 #define DEBUG false
 #define TO_FILE false
@@ -25,62 +24,19 @@ long long smallestPowerBiggerThan(long long base, long long value) {
   return i;
 }
 
-// Testing for all values of m < M_MAX
+// Testing for all values of m < M_MAX and T_MIN(m) <= t < T_MAX(m)
 const int M_MAX = 30;
 int T_MIN(int m = 1) { return m; }
 int T_MAX(int m = M_MAX) { return 8 * smallestPowerBiggerThan(2, m); }
 
-template <typename R>
-class multiset {
- public:
-  int sz = 0;
-  static constexpr int n = R::order;
-  multiset() { c = vector<int>(n); }
-  R first() {
-    for (int i = 0; i < n; i++)
-      if (c[i] != 0) return R(i);
-    return R();
-  }
-  R last() {
-    for (int i = n - 1; i >= 0; i--)
-      if (c[i] != 0) return R(i);
-    return R();
-  }
-  void erase(const R &x, int a = 1) {
-    sz -= a;
-    c[x.value] -= a;
-  }
-  void insert(const R &x, int a = 1) {
-    sz += a;
-    c[x.value] += a;
-  }
-  size_t hash() const {
-    long long h = 0;
-    long long t = 1;
-    for (int i = 1; i < R::order; i++) {
-      h += t * c[i];
-      t *= T_MAX();
-    }
-    return h;
-  }
-  size_t size() { return sz; }
-  bool empty() { return size() == 0; }
-  bool operator<(const multiset<R> &other) const { return (c < other.c); }
-  size_t count(const R &x) { return c[x.value]; }
-  void print() {
-    for (int i = 0; i < n; i++) {
-      cout << c[i] << " ";
-    }
-    cout << "\n";
-  }
-  vector<int> c;
-};
+#include "rings.cpp"
+#include "sequence.cpp"
 
 unordered_map<int, target_ring> memorized_e_m[M_MAX];
 
 // Calculates e_m(S)
 template <typename R>
-R e_m(multiset<R> &S, int m) {
+R e_m(sequence<R> &S, int m) {
   if (m == 0) return R::unit;
   if (m > S.size()) return 0;
   if (S.size() == 1) return S.first();
@@ -91,7 +47,7 @@ R e_m(multiset<R> &S, int m) {
 
 // Auxiliary function to e_m
 template <typename R>
-R calc_e_m(multiset<R> &S, int m) {
+R calc_e_m(sequence<R> &S, int m) {
   R x = S.last();
 
   S.erase(x);
@@ -104,7 +60,7 @@ R calc_e_m(multiset<R> &S, int m) {
 // Checks all subsets of a sequence S of size t whose e_m is 0, returns true if
 // such subsequence exists, false otherwise
 template <typename R>
-bool checkSubsets(int t, int m, multiset<R> &S, int minimum = 0) {
+bool checkSubsets(int t, int m, sequence<R> &S, int minimum = 0) {
   bool subsetZero = false;
   if (minimum == R::order) return S.size() == t && e_m(S, m) == 0;
   int removed = 0;
@@ -125,7 +81,7 @@ bool checkSubsets(int t, int m, multiset<R> &S, int minimum = 0) {
 // subsequence of size t whose e_m is 0, returns true if it finds it, false
 // otherwise
 template <typename R>
-bool CE(int t, int m, int size, multiset<R> prev = multiset<R>(),
+bool CE(int t, int m, int size, sequence<R> prev = sequence<R>(),
         int minimum = 0) {
   bool nonZero = false;
   while (prev.size() < size && !nonZero) {
@@ -145,7 +101,7 @@ bool CE(int t, int m, int size, multiset<R> prev = multiset<R>(),
 // Calculates EGZ(t, R, m)
 template <typename R>
 int EGZ(int t, int m) {
-  multiset<R> t_choose_m;
+  sequence<R> t_choose_m;
   t_choose_m.insert(R::unit, t);
   if (e_m(t_choose_m, m) != 0) {
     printf("em=%d, t=%d, m=%d\n", e_m(t_choose_m, m).value, t, m);
@@ -186,5 +142,7 @@ void findEGZs(int m_max = M_MAX) {
 }
 
 int main() {
-  findEGZs<target_ring>(M_MAX);
+    // basic testing
+  assert(EGZ<target_ring>(16, 8) == 33);
+  assert(EGZ<target_ring>(17, 8) == 33);
 }
