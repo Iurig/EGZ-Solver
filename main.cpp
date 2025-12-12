@@ -2,10 +2,7 @@
 
 #include <fstream>
 #include <iostream>
-#include <numeric>
 #include <unordered_map>
-#include <unordered_set>
-#include <vector>
 #include <assert.h>
 
 #define DEBUG false
@@ -13,8 +10,6 @@
 
 // Change this to the ring being studied
 #define target_ring Znp<2, 2>
-
-using namespace std;
 
 long long smallestPowerBiggerThan(long long base, long long value) {
   long long i = 1;
@@ -32,7 +27,7 @@ int T_MAX(int m = M_MAX) { return 8 * smallestPowerBiggerThan(2, m); }
 #include "rings.cpp"
 #include "sequence.cpp"
 
-unordered_map<int, target_ring> memorized_e_m[M_MAX];
+unordered_map<sequence<target_ring>, target_ring> memorized_e_m[M_MAX];
 
 // Calculates e_m(S)
 template <typename R>
@@ -40,16 +35,16 @@ R e_m(sequence<R> &S, int m) {
   if (m == 0) return R::unit;
   if (m > S.size()) return 0;
   if (S.size() == 1) return S.element();
-  if (memorized_e_m[m].find(S.hash()) != memorized_e_m[m].end())
-    return memorized_e_m[m][S.hash()];
+  if (memorized_e_m[m].find(S) != memorized_e_m[m].end())
+    return memorized_e_m[m][S];
 
   R x = S.element();
 
+  R &resp = memorized_e_m[m][S];
   S.remove(x);
-  R blah = x * e_m(S, m - 1) + e_m(S, m);
+  resp = x * e_m(S, m - 1) + e_m(S, m);
   S.insert(x);
-
-  return memorized_e_m[m][S.hash()] = blah;
+  return resp;
 }
 
 // Checks all subsets of a sequence S of size t whose e_m is 0, returns true if
