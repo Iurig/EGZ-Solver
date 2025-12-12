@@ -47,5 +47,5 @@ int main() {
   EGZSolver<Znp<2, 2>> s;
   assert(s.EGZ(16, 8) == 33);
   assert(s.EGZ(17, 8) == 33);
-  findEGZs<F4>(30);
+  findEGZs<Zn<4>>(30);
 }
