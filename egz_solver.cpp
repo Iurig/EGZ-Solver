@@ -1,5 +1,9 @@
-#include "sequence.cpp"
+#ifdef DEBUG
 #include <iostream>
+#endif
+
+#include "rings.cpp"
+#include "sequence.cpp"
 
 using namespace std;
 
@@ -52,8 +56,7 @@ public:
   // Tries to find a CounterExample of sequence of size "size" that has a
   // subsequence of size t whose e_m is 0, returns true if it finds it, false
   // otherwise
-  bool CE(int t, int m, int size, sequence<R> prev = sequence<R>(),
-          int minimum = 0) {
+  bool CE(int t, int m, int size, sequence<R> prev = sequence<R>(), int minimum = 0) {
     bool nonZero = false;
     while (prev.size() < size && !nonZero) {
       if (minimum < R::order - 1)
@@ -74,8 +77,9 @@ public:
     sequence<R> t_choose_m;
     t_choose_m.insert(R::unit, t);
     if (e_m(t_choose_m, m) != 0) {
-      cout << "em = " << e_m(t_choose_m, m).value << ", t = " << t
-           << ", m = " << m << endl;
+#ifdef DEBUG
+      cout << "em = " << e_m(t_choose_m, m).value << ", t = " << t << ", m = " << m << endl;
+#endif
       return 0;
     }
     int l = t + 1;

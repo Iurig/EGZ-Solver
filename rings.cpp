@@ -51,8 +51,7 @@ public:
     while (m % order == 0) {
       m /= order;
     }
-    // TODO: sus
-    return false; // printing everybody
+    return false; // printing everybody, delete if you want to skip prime powers
     return m == 1;
   }
 
@@ -96,15 +95,6 @@ public:
   }
 
   static bool skip(int m) { return false; };
-
-  // TODO: not being used
-  void valueFromExpression() {
-    value = 0;
-    for (int i = 0; i < p; i++) {
-      value *= n;
-      value += expression[i].value;
-    }
-  }
 
   // Operator +
   Znp operator+(const Znp &other) {
@@ -166,9 +156,7 @@ public:
 template <typename R, typename P>
 class product : public ring {
 public:
-  static constexpr int characteristic =
-                           lcm(R::characteristic, P::characteristic),
-                       order = R::order * P::order,
+  static constexpr int characteristic = lcm(R::characteristic, P::characteristic), order = R::order * P::order,
                        unit = R::unit * P::order + P::unit;
 
   // Constructor
@@ -176,18 +164,14 @@ public:
 
   // Operator +
   product operator+(const product &other) const {
-    return product((R(value / P::order) + R(other.value / P::order)).value,
-                   (P(value % P::order) + P(other.value % P::order)).value);
+    return product((R(value / P::order) + R(other.value / P::order)).value, (P(value % P::order) + P(other.value % P::order)).value);
   }
 
   // Operator *
   product operator*(const product &other) const {
-    return product((R(value / P::order) * R(other.value / P::order)).value,
-                   (P(value % P::order) * P(other.value % P::order)).value);
+    return product((R(value / P::order) * R(other.value / P::order)).value, (P(value % P::order) * P(other.value % P::order)).value);
   }
 
   // Ring name
-  static string name() {
-    return "(" + R::name() + ", " + R::name() + ")";
-  };
+  static string name() { return "(" + R::name() + ", " + R::name() + ")"; };
 };

@@ -11,8 +11,7 @@
 
 template <typename R>
 void findEGZs(int m_max = M_MAX) {
-  // TODO: should this be R::name() instead of R::order?
-  string output_file_name = "EGZ_" + to_string(R::order) + ".txt";
+  string output_file_name = "EGZ_" +  R::name() + ".csv";
   ConditionalFileStream output_file(output_file_name, TO_FILE);
 
   EGZSolver<R> s;
@@ -42,4 +41,5 @@ int main() {
   EGZSolver<Znp<2, 2>> s;
   assert(s.EGZ(16, 8) == 33);
   assert(s.EGZ(17, 8) == 33);
+  findEGZs<Zn<2>>(3);
 }

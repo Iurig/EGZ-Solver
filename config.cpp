@@ -1,5 +1,3 @@
-#include "rings.cpp"
-
 long long smallestPowerBiggerThan(long long base, long long value) {
   long long i = 1;
   while (i <= value) {
