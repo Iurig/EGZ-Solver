@@ -1,5 +1,5 @@
-#include <functional>
 #include <cstdlib>
+#include <functional>
 #include <vector>
 
 #include "config.cpp"
@@ -38,7 +38,9 @@ public:
     }
     return h;
   }
-  bool operator==(const sequence<R> &o) const { return identifier() == o.identifier(); }
+  bool operator==(const sequence<R> &o) const {
+    return identifier() == o.identifier();
+  }
   bool empty() { return size() == 0; }
   bool operator<(const sequence<R> &other) const { return c < other.c; }
   size_t count(const R &x) { return c[x.value]; }
@@ -48,8 +50,6 @@ public:
 namespace std {
 template <typename R>
 struct hash<sequence<R>> {
-  size_t operator()(const sequence<R> &s) const {
-    return s.identifier();
-  }
+  size_t operator()(const sequence<R> &s) const { return s.identifier(); }
 };
 } // namespace std
