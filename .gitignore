@@ -1,2 +1,5 @@
 main
-.vscode/
+.vscode/**
+*.ilk
+*.obj
+*.pdb
