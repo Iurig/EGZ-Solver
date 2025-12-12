@@ -1,14 +1,14 @@
-#include <iostream>
+#include <string>
 
 using namespace std;
 
 // Check this class for prerequisites of children classes
 class ring {
- public:
+public:
   int value;
 
   // Don't forget declaring a static constexpr int characteristic and order,
-  // as well as printName
+  // as well as name
 
   // Constructor
   ring(int value = 0) : value(value) {}
@@ -34,11 +34,14 @@ class ring {
 
   // Operator <
   bool operator<(const ring &other) { return value < other.value; };
+
+  // Ring name
+  string name() { return "ring"; }
 };
 
 template <int n>
 class Zn : public ring {
- public:
+public:
   static constexpr int characteristic = n, order = n, unit = 1;
 
   // Constructor
@@ -48,7 +51,8 @@ class Zn : public ring {
     while (m % order == 0) {
       m /= order;
     }
-    return false;  // printing everybody
+    // TODO: sus
+    return false; // printing everybody
     return m == 1;
   }
 
@@ -64,13 +68,13 @@ class Zn : public ring {
   // Operator <
   bool operator<(const Zn &other) const { return (value < other.value); }
 
-  // printName
-  static void printName() { cout << "Z_" << n; }
+  // Ring name
+  static string name() { return "Z_" + to_string(n); }
 };
 
 template <int n, int p>
 class Znp : public ring {
- public:
+public:
   static constexpr int characteristic = p, order = p * n;
   static constexpr int unitCalc() {
     int power = 1, resp = 0;
@@ -93,6 +97,7 @@ class Znp : public ring {
 
   static bool skip(int m) { return false; };
 
+  // TODO: not being used
   void valueFromExpression() {
     value = 0;
     for (int i = 0; i < p; i++) {
@@ -123,34 +128,27 @@ class Znp : public ring {
     return prod;
   }
 
-  friend std::ostream& operator<<(std::ostream& os, const Znp& dt) {
-    os << "{ value: " << dt.value << ", " << "expression: ";
-    for (int i = 0; i < p; i++) {
-      os << dt.expression[i].value << " ";
-    }
-    os << "}";
-    return os;
-  }
-
-  // printName
-  static void printName() { cout << "Z_" << n << "^" << p; };
+  // Ring name
+  static string name() { return "Z_" + to_string(n) + "^" + to_string(p); };
 };
 
 class F4 : public ring {
- public:
+public:
   static constexpr int characteristic = 4, order = 4;
-  static constexpr int sum[4][4] =  // +      0   1   x   x+1
-                                    //------------------------
-      {{0, 1, 2, 3},                // 0      0   1   x   x+1
-       {1, 0, 3, 2},                // 1      1   0   x+1 x
-       {2, 3, 0, 1},                // x      x   x+1 0   1
-       {3, 2, 1, 0}},               // x+1    x+1 x   1   0
-      prod[4][4] =                  // *      0   1   x   x+1
-                                    //------------------------
-      {{0, 0, 0, 0},                // 0      0   0   0   0
-       {0, 1, 2, 3},                // 1      0   1   x   x+1
-       {0, 2, 3, 1},                // x      0   x   x+1 1
-       {0, 3, 1, 2}};               // x+1    0   x+1 1   x
+  // clang-format off
+  static constexpr int sum[4][4] =                     // +      0   1   x   x+1
+                                                       //------------------------
+      {{0, 1, 2, 3},               // 0      0   1   x   x+1
+       {1, 0, 3, 2},               // 1      1   0   x+1 x
+       {2, 3, 0, 1},               // x      x   x+1 0   1
+       {3, 2, 1, 0}},              // x+1    x+1 x   1   0
+      prod[4][4] =                                     // *      0   1   x   x+1
+                                                       //------------------------
+      {{0, 0, 0, 0},               // 0      0   0   0   0
+       {0, 1, 2, 3},               // 1      0   1   x   x+1
+       {0, 2, 3, 1},               // x      0   x   x+1 1
+       {0, 3, 1, 2}};              // x+1    0   x+1 1   x
+  // clang-format on
 
   // Constructor
   F4(int value = 0) : ring(value) {}
@@ -161,13 +159,13 @@ class F4 : public ring {
   // Operator *
   F4 operator*(const F4 &other) const { return F4(prod[value][other.value]); }
 
-  // printName
-  static void printName() { cout << "F_4"; }
+  // Ring name
+  static string name() { return "F_4"; }
 };
 
 template <typename R, typename P>
 class product : public ring {
- public:
+public:
   static constexpr int characteristic =
                            lcm(R::characteristic, P::characteristic),
                        order = R::order * P::order,
@@ -188,11 +186,8 @@ class product : public ring {
                    (P(value % P::order) * P(other.value % P::order)).value);
   }
 
-  static void printName() {
-    cout << "(";
-    R::printName();
-    cout << ", ";
-    P::printName();
-    cout << ")";
+  // Ring name
+  static string name() {
+    return "(" + R::name() + ", " + R::name() + ")";
   };
 };
