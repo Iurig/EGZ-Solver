@@ -11,10 +11,14 @@
 
 template <typename R>
 void findEGZs(int m_max = M_MAX) {
-  string output_file_name = "EGZ_" +  R::name() + ".csv";
+  string output_file_name = "EGZ_" + R::name() + ".csv";
   ConditionalFileStream output_file(output_file_name, TO_FILE);
 
   EGZSolver<R> s;
+  output_file << "\t";
+  for (int i = 1; i < T_MAX(M_MAX); i++)
+    output_file << "\t" << i;
+  output_file << "\n";
   for (int m = 1; m < m_max; m++) {
     output_file << m << "\t";
     if (R::skip(m)) {
@@ -25,8 +29,10 @@ void findEGZs(int m_max = M_MAX) {
       output_file << "\t";
     for (int t = T_MIN(m); t < T_MAX(m); t++) {
       int e = s.EGZ(t, m);
-      if (max(e - t, -1) == -1)
+      if (max(e - t, -1) == -1) {
+        output_file << "\t";
         continue;
+      }
       cout << "EGZ(" << t << ", " << R::name() << ", " << m << ") = " << e << endl;
       cout << "EGZ-t = " << max(e - t, -1) << endl;
       cout << endl;
@@ -41,5 +47,5 @@ int main() {
   EGZSolver<Znp<2, 2>> s;
   assert(s.EGZ(16, 8) == 33);
   assert(s.EGZ(17, 8) == 33);
-  findEGZs<Zn<2>>(3);
+  findEGZs<Zn<5>>(30);
 }

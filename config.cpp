@@ -9,4 +9,4 @@ long long smallestPowerBiggerThan(long long base, long long value) {
 // Testing for all values of m < M_MAX and T_MIN(m) <= t < T_MAX(m)
 const int M_MAX = 30;
 int T_MIN(int m = 1) { return m; }
-int T_MAX(int m = M_MAX) { return 8 * smallestPowerBiggerThan(2, m); }
+int T_MAX(int m = M_MAX) { return 40; }

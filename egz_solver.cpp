@@ -4,6 +4,7 @@
 
 #include "rings.cpp"
 #include "sequence.cpp"
+#include <unordered_map>
 
 using namespace std;
 
