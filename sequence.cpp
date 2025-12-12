@@ -38,9 +38,7 @@ public:
     }
     return h;
   }
-  bool operator==(const sequence<R> &o) const {
-    return identifier() == o.identifier();
-  }
+  bool operator==(const sequence<R> &o) const { return identifier() == o.identifier(); }
   bool empty() { return size() == 0; }
   bool operator<(const sequence<R> &other) const { return c < other.c; }
   size_t count(const R &x) { return c[x.value]; }

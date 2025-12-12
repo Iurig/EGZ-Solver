@@ -28,8 +28,7 @@ void findEGZs(int m_max = M_MAX) {
       int e = s.EGZ(t, m);
       if (max(e - t, -1) == -1)
         continue;
-      cout << "EGZ(" << t << ", " << R::name() << ", " << m << ") = " << e
-           << endl;
+      cout << "EGZ(" << t << ", " << R::name() << ", " << m << ") = " << e << endl;
       cout << "EGZ-t = " << max(e - t, -1) << endl;
       cout << endl;
       output_file << e - t << "\t";
