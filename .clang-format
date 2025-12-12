@@ -1,1 +1,2 @@
 AlwaysBreakTemplateDeclarations: Yes
+ColumnLimit: 140
