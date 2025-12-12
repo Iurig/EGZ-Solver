@@ -1,8 +1,5 @@
 #include "rings.cpp"
 
-// Change this to the ring being studied
-#define target_ring Znp<2, 2>
-
 long long smallestPowerBiggerThan(long long base, long long value) {
   long long i = 1;
   while (i <= value) {
