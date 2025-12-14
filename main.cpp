@@ -20,7 +20,9 @@ void findEGZs(int m_max = M_MAX) {
     output_file << "\t" << i;
   output_file << "\n";
   for (int m = 1; m < m_max; m++) {
-    output_file << m << "\t";
+    output_file << m;
+    if (m < m_max - 1)
+      output_file << "\t";
     if (R::skip(m)) {
       output_file << "\n";
       continue;
