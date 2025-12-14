@@ -11,7 +11,7 @@
 
 template <typename R>
 void findEGZs(int m_max = M_MAX) {
-  string output_file_name = "EGZ_" + R::name() + ".csv";
+  string output_file_name = "EGZ_" + R::name() + ".tsv";
   ConditionalFileStream output_file(output_file_name, TO_FILE);
 
   EGZSolver<R> s;
