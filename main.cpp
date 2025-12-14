@@ -16,7 +16,7 @@ void findEGZs(int m_max = M_MAX) {
 
   EGZSolver<R> s;
   output_file << "\t";
-  for (int i = 1; i < T_MAX(M_MAX); i++)
+  for (int i = 1; i < T_MAX(m_max); i++)
     output_file << "\t" << i;
   output_file << "\n";
   for (int m = 1; m < m_max; m++) {
@@ -27,16 +27,21 @@ void findEGZs(int m_max = M_MAX) {
     }
     for (int i = 0; i < m; i++)
       output_file << "\t";
-    for (int t = T_MIN(m); t < T_MAX(m); t++) {
-      int e = s.EGZ(t, m);
-      if (max(e - t, -1) == -1) {
-        output_file << "\t";
-        continue;
+    for (int t = T_MIN(m); t < T_MAX(m_max); t++) {
+      if (t < T_MAX(m)) {
+        int e = s.EGZ(t, m);
+        if (max(e - t, -1) == -1) {
+          if (t < T_MAX(m_max) - 1)
+            output_file << "\t";
+          continue;
+        }
+        cout << "EGZ(" << t << ", " << R::name() << ", " << m << ") = " << e << endl;
+        cout << "EGZ-t = " << max(e - t, -1) << endl;
+        cout << endl;
+        output_file << e - t;
       }
-      cout << "EGZ(" << t << ", " << R::name() << ", " << m << ") = " << e << endl;
-      cout << "EGZ-t = " << max(e - t, -1) << endl;
-      cout << endl;
-      output_file << e - t << "\t";
+      if (t < T_MAX(m_max) - 1)
+        output_file << "\t";
     }
     output_file << "\n";
   }
