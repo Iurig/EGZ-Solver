@@ -141,11 +141,10 @@ public:
   // clang-format on
 
   static bool skip(int m) {
-    while (m % 2 == 0) {
-      m /= 2;
+    if (m % 4 != 1) {
+      return true;
     }
-    // return false; // printing everybody, delete if you want to skip prime powers
-    return m == 1;
+    return false; // printing everybody, delete if you want to skip prime powers
   }
 
   // Constructor
