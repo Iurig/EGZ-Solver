@@ -72,8 +72,6 @@ public:
         nonZero = nonZero || CE(t, m, size, prev, minimum + 1);
       prev.insert(minimum);
     }
-    // prev.print();
-    // cout << "Size: " << prev.size() << ", Target size: " << size << endl;
     if (nonZero == true)
       return nonZero;
     else {

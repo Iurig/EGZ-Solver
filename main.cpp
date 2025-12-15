@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <iostream>
 
-// #define DEBUG
+#define DEBUG
 
 #include "conditional_file_stream.cpp"
 #include "egz_solver.cpp"
@@ -56,6 +56,5 @@ int main() {
   EGZSolver<Znp<2, 2>> s;
   assert(s.EGZ(16, 8) == 33);
   assert(s.EGZ(17, 8) == 33);
-  sequence<Znp<2, 2>> seq;
-  findEGZs<Zn<4>>();
+  findEGZs<F4>();
 }
