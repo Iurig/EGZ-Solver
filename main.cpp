@@ -45,7 +45,10 @@ void findEGZs(int m_max = M_MAX) {
       if (t < T_MAX(m_max) - 1)
         output_file << "\t";
     }
-    output_file << "\n";
+    if (m == m_max - 1)
+      output_file << "\t";
+    else
+      output_file << "\n";
   }
 }
 
@@ -54,5 +57,5 @@ int main() {
   EGZSolver<Znp<2, 2>> s;
   assert(s.EGZ(16, 8) == 33);
   assert(s.EGZ(17, 8) == 33);
-  findEGZs<Z_2_over>(50);
+  findEGZs<Zn<4>>(50);
 }
