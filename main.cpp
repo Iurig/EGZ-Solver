@@ -11,7 +11,7 @@
 #define TO_FILE true
 
 template <typename R>
-void findEGZs(int m_max = M_MAX) {
+void findEGZs(int m_max = M_MAX, int m_min = 1) {
   string output_file_name = "EGZ_" + R::name() + ".tsv";
   ConditionalFileStream output_file(output_file_name, TO_FILE);
 
@@ -20,7 +20,7 @@ void findEGZs(int m_max = M_MAX) {
   for (int i = 1; i < T_MAX(m_max); i++)
     output_file << "\t" << i;
   output_file << "\n";
-  for (int m = 1; m < m_max; m++) {
+  for (int m = m_min; m < m_max; m++) {
     output_file << m;
     if (m < m_max - 1)
       output_file << "\t";
@@ -58,5 +58,5 @@ int main() {
   EGZSolver<Znp<2, 2>> s;
   assert(s.EGZ(16, 8) == 33);
   assert(s.EGZ(17, 8) == 33);
-  findEGZs<Zn<8>>(20);
+  findEGZs<Z_2_over>();
 }

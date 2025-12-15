@@ -140,6 +140,14 @@ public:
        {0, 3, 2, 1}};              // x+1    0   x+1 x   1
   // clang-format on
 
+  static bool skip(int m) {
+    while (m % 2 == 0) {
+      m /= 2;
+    }
+    // return false; // printing everybody, delete if you want to skip prime powers
+    return m == 1;
+  }
+
   // Constructor
   Z_2_over(int value = 0) : ring(value) {}
 
