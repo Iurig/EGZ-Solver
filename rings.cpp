@@ -92,6 +92,10 @@ public:
       expression[i] = Zn<n>(index);
       index = index / n;
     }
+    for (int i = 0; i < p; i++) {
+      index *= n;
+    }
+    value -= index;
   }
 
   static bool skip(int m) { return false; };
@@ -116,6 +120,13 @@ public:
       prod.value += prod.expression[i].value;
     }
     return prod;
+  }
+  Znp print() {
+    for (int i = 0; i < p; i++) {
+      cout << expression[i].value << " ";
+    }
+    cout << endl;
+    return 0;
   }
 
   // Ring name

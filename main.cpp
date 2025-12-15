@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <iostream>
 
-#define DEBUG
+// #define DEBUG
 
 #include "conditional_file_stream.cpp"
 #include "egz_solver.cpp"
@@ -16,7 +16,7 @@ void findEGZs(int m_max = M_MAX, int m_min = 1) {
   ConditionalFileStream output_file(output_file_name, TO_FILE);
 
   EGZSolver<R> s;
-  output_file << "\t";
+
   for (int i = 1; i < T_MAX(m_max); i++)
     output_file << "\t" << i;
   output_file << "\n";
@@ -48,9 +48,7 @@ void findEGZs(int m_max = M_MAX, int m_min = 1) {
       if (t < T_MAX(m_max) - 1)
         output_file << "\t";
     }
-    if (m == m_max - 1)
-      output_file << "\t";
-    else
+    if (m != m_max - 1)
       output_file << "\n";
   }
 }
@@ -60,5 +58,6 @@ int main() {
   EGZSolver<Znp<2, 2>> s;
   assert(s.EGZ(16, 8) == 33);
   assert(s.EGZ(17, 8) == 33);
-  findEGZs<Zn<5>>();
+  sequence<Znp<2, 2>> seq;
+  findEGZs<Znp<2, 2>>(35, 34);
 }
