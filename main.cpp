@@ -3,10 +3,11 @@
 #include <assert.h>
 #include <iostream>
 
+#define DEBUG
+
 #include "conditional_file_stream.cpp"
 #include "egz_solver.cpp"
 
-// #define DEBUG
 #define TO_FILE true
 
 template <typename R>
@@ -57,5 +58,5 @@ int main() {
   EGZSolver<Znp<2, 2>> s;
   assert(s.EGZ(16, 8) == 33);
   assert(s.EGZ(17, 8) == 33);
-  findEGZs<Zn<4>>(50);
+  findEGZs<Zn<8>>(20);
 }

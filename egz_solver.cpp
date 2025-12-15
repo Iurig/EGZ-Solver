@@ -54,7 +54,7 @@ public:
     return subsetZero;
   }
 
-  // Tries to find a CounterExample of sequence of size "size" that has a
+  // Tries to find a CounterExample of sequence of size "size" that has no
   // subsequence of size t whose e_m is 0, returns true if it finds it, false
   // otherwise
   bool CE(int t, int m, int size, sequence<R> prev = sequence<R>(), int minimum = 0) {
@@ -68,6 +68,14 @@ public:
       return nonZero;
     else if (minimum == R::order - 1) {
       bool isCE = !checkSubsets(t, m, prev);
+      if (isCE) {
+#ifdef DEBUG
+        cout << "Found CE of size " << size << " for t = " << t << " and m = " << m << ": ";
+        for (int i = 0; i < R::order; i++)
+          cout << prev.count(i) << " ";
+        cout << endl;
+#endif
+      }
       return isCE;
     } else
       return nonZero;
