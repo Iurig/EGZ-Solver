@@ -22,8 +22,6 @@ void findEGZs(int m_max = M_MAX, int m_min = 1) {
   output_file << "\n";
   for (int m = m_min; m < m_max; m++) {
     output_file << m;
-    if (m < m_max - 1)
-      output_file << "\t";
     if (R::skip(m)) {
       for (int j = 0; j < T_MAX(m_max) - 1; j++)
         output_file << "\t";
@@ -59,5 +57,5 @@ int main() {
   assert(s.EGZ(16, 8) == 33);
   assert(s.EGZ(17, 8) == 33);
   sequence<Znp<2, 2>> seq;
-  findEGZs<Znp<2, 2>>(35, 34);
+  findEGZs<Zn<4>>();
 }
