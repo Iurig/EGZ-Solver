@@ -43,6 +43,14 @@ public:
   bool operator<(const sequence<R> &other) const { return c < other.c; }
   size_t count(const R &x) { return c[x.value]; }
   vector<int> c;
+
+  bool is_Subsequence_of(const sequence<R> &S) {
+    for (int i = 0; i < n; i++) {
+      if (c[i] > S.c[i])
+        return false;
+    }
+    return true;
+  }
 };
 
 namespace std {

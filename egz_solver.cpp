@@ -14,6 +14,7 @@ private:
   unordered_map<sequence<R>, R> memorized_e_m[M_MAX];
 
 public:
+  sequence<R> subseq = sequence<R>();
   // Calculates e_m(S)
   R e_m(sequence<R> &S, int m) {
     if (m == 0)
@@ -38,8 +39,15 @@ public:
   // if such subsequence exists, false otherwise
   bool checkSubsets(int t, int m, sequence<R> &S, int minimum = 0) {
     bool subsetZero = false;
-    if (minimum == R::order)
-      return S.size() == t && e_m(S, m) == 0;
+    if (subseq.size() == t && e_m(subseq, m) == 0 && subseq.is_Subsequence_of(S)) {
+      return true;
+    }
+    if (minimum == R::order) {
+      bool found = (S.size() == t && e_m(S, m) == 0);
+      if (found)
+        subseq = S;
+      return found;
+    }
     int removed = 0;
     while (S.size() >= t) {
       subsetZero = subsetZero || checkSubsets(t, m, S, minimum + 1);
