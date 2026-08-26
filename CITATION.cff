@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+title: EGZ Solver
+message: >-
+  If you use this software or the computed tables, please cite the thesis under
+  "preferred-citation" below.
+type: software
+authors:
+  - family-names: Carvalho
+    given-names: Iuri Grangeiro
+repository-code: "https://github.com/Iurig/EGZ-Solver"
+abstract: >-
+  A C++ brute-force calculator for arbitrary degree Erdős-Ginzburg-Ziv
+  constants in finite commutative unit rings, together with the tables of
+  constants it has computed.
+keywords:
+  - Erdős-Ginzburg-Ziv
+  - zero-sum theory
+  - additive combinatorics
+  - finite rings
+  - combinatorics
+license:
+  - MIT
+  - CC-BY-4.0
+preferred-citation:
+  type: thesis
+  title: Higher Degree Erdős-Ginzburg-Ziv Constants over Rings
+  authors:
+    - family-names: Carvalho
+      given-names: Iuri Grangeiro
+  year: 2025
+  institution:
+    name: Instituto de Matemática e Estatística, Universidade de São Paulo
+    city: São Paulo
+    country: BR
