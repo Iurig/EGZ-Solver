@@ -31,6 +31,9 @@ inline long long smallestPowerBiggerThan(long long base, long long value) {
 namespace egz {
 inline int m_max = EGZ_M_MAX;
 inline int t_max = EGZ_T_MAX;
+// Work units a single EGZ(t, m) may spend before being abandoned; 0 is
+// unlimited. See "Bounding the work per cell" in README.md.
+inline long long max_work = 0;
 // Gates the DEBUG progress tracing in egz_solver.hpp (see --quiet).
 inline bool verbose = true;
 } // namespace egz
@@ -47,3 +50,6 @@ inline void setSearchBounds(int m_max, int t_max) {
 }
 
 inline void setVerbose(bool on) { egz::verbose = on; }
+
+inline long long workBudget() { return egz::max_work; }
+inline void setWorkBudget(long long units) { egz::max_work = units; }

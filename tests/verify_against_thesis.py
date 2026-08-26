@@ -35,6 +35,10 @@ from math import comb
 # limit mean "not computed", not "no EGZ constant".
 FLAT = None
 
+# Written by --max-work into a cell the solver gave up on. Distinct from blank,
+# which means "no EGZ constant exists" or "outside the computed range".
+ABANDONED = "?"
+
 RINGS = {
     "EGZ_Z_3.tsv": dict(order=3, char=3, cyclic=3, t_limit=FLAT),
     "EGZ_Z_4.tsv": dict(order=4, char=4, cyclic=4, t_limit=FLAT),
@@ -83,7 +87,8 @@ def load(path):
         f = line.split("\t")
         if not f or not f[0]:
             continue
-        rows[int(f[0])] = {t: int(f[t]) for t in range(1, len(f)) if f[t]}
+        # "?" marks a cell abandoned under --max-work: no value to check.
+        rows[int(f[0])] = {t: int(f[t]) for t in range(1, len(f)) if f[t] and f[t] != ABANDONED}
     return rows
 
 
@@ -142,6 +147,8 @@ def check_blank_rule(tables, rep):
             m = int(f[0])
             t_stop = limit(m) if limit else len(f)
             for t in range(m, len(f)):
+                if f[t] == ABANDONED:
+                    continue  # gave up under --max-work; says nothing either way
                 checked += 1
                 expect_blank = t >= t_stop or comb(t, m) % ch != 0
                 if expect_blank != (f[t] == ""):

@@ -24,6 +24,7 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
     output_file << "\t" << i;
 
   vector<int> skipped;
+  long long abandoned = 0;
   for (int m = m_min; m < m_max; m++) {
     // Skipped rows are omitted, not blanked: an absent row says "not computed",
     // which a blank row could not distinguish from "no EGZ constant exists".
@@ -40,23 +41,33 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
     for (int t = T_MIN(m); t < T_MAX(m_max); t++) {
       if (t < T_MAX(m)) {
         int e = s.EGZ(t, m);
-        if (max(e - t, -1) == -1) {
+        if (e == EGZ_ABANDONED) {
+          // Must be caught before the blank test below: e - t would be negative
+          // there, and the cell would be written blank as though no constant
+          // existed. "?" says the budget ran out instead.
+          abandoned++;
+          output_file << "?";
+        } else if (max(e - t, -1) == -1) {
           if (t < T_MAX(m_max) - 1)
             output_file << "\t";
           continue;
+        } else {
+          if (!quiet) {
+            cout << "EGZ(" << t << ", " << R::name() << ", " << m << ") = " << e << endl;
+            cout << "EGZ-t = " << max(e - t, -1) << endl;
+            cout << endl;
+          }
+          output_file << e - t;
         }
-        if (!quiet) {
-          cout << "EGZ(" << t << ", " << R::name() << ", " << m << ") = " << e << endl;
-          cout << "EGZ-t = " << max(e - t, -1) << endl;
-          cout << endl;
-        }
-        output_file << e - t;
       }
       if (t < T_MAX(m_max) - 1)
         output_file << "\t";
     }
   }
 
+  if (abandoned > 0)
+    cerr << "abandoned " << abandoned << " cell" << (abandoned == 1 ? "" : "s") << " at --max-work " << workBudget()
+         << "; they are written as ?" << endl;
   if (!skipped.empty()) {
     cerr << "skipped " << skipped.size() << " row" << (skipped.size() == 1 ? "" : "s") << ", m =";
     for (int m : skipped)
@@ -79,6 +90,8 @@ static void usage() {
        << "                    mod:K=R     keep only m congruent to R modulo K\n"
        << "                    list:a,b,c  exactly these m\n"
        << "                  Skipped rows are omitted, not written blank.\n"
+       << "  --max-work N    give up on a cell after N work units (0 = no limit).\n"
+       << "                  Abandoned cells are written as ?, never left blank.\n"
        << "  --no-file       print progress only, do not write a table\n"
        << "  --quiet         suppress per-value progress output\n"
        << "  --list-rings    list supported ring names and exit\n"
@@ -115,6 +128,7 @@ int main(int argc, char **argv) {
   int m_max = M_MAX();
   int t_max = T_MAX();
   bool to_file = true, quiet = false;
+  long long max_work = 0;
   vector<string> skip_specs;
 
   for (int i = 1; i < argc; i++) {
@@ -144,6 +158,8 @@ int main(int argc, char **argv) {
       m_max = intArg(i, argc, argv, arg);
     } else if (arg == "--t-max") {
       t_max = intArg(i, argc, argv, arg);
+    } else if (arg == "--max-work") {
+      max_work = intArg(i, argc, argv, arg);
     } else if (arg == "--skip") {
       if (i + 1 >= argc) {
         cerr << "--skip requires a value" << endl;
@@ -174,6 +190,7 @@ int main(int argc, char **argv) {
   // from M_MAX() at construction.
   setSearchBounds(m_max, t_max);
   setVerbose(!quiet);
+  setWorkBudget(max_work);
 
   int bad_spec = 0;
   bool known = dispatchRing(ring, [&](auto tag) {

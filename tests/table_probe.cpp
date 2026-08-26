@@ -48,6 +48,8 @@ static std::vector<Cell> readTable(const std::string &path) {
     for (size_t i = 1; i < row.size() && i < header.size(); i++) {
       if (row[i].empty())
         continue; // blank: outside [T_MIN, T_MAX) for this row, or e - t <= -1
+      if (row[i] == "?")
+        continue; // abandoned under --max-work, so there is no value to check
       int t = std::stoi(header[i]);
       cells.push_back({m, t, std::stoi(row[i]) + t});
     }

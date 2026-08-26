@@ -42,6 +42,7 @@ same either way.
 | `--t-max N` | Exclusive upper bound on `t`. |
 | `--out-dir DIR` | Where to write the table (default `Experimental tables`). |
 | `--skip EXPR` | Leave rows out of the table; repeatable. See [Skipping rows](#skipping-rows). |
+| `--max-work N` | Give up on a cell after `N` work units; `0` is unlimited. See [Bounding the work per cell](#bounding-the-work-per-cell). |
 | `--no-file` | Print progress only; write nothing. |
 | `--quiet` | Suppress per-value progress output. |
 | `--list-rings` | List supported ring names and exit. |
@@ -81,6 +82,34 @@ For $ℤ_n$, `--skip powers` leaves out exactly the `m = n^k` rows, which are bo
 the most expensive and the ones already settled in closed form (see
 [tests/README.md](tests/README.md)), so little is lost by skipping them.
 
+## Bounding the work per cell
+
+`--skip` predicts which rows are expensive. `--max-work N` measures instead:
+each `EGZ(t, m)` is given `N` units of work, and a cell that exceeds its budget
+is abandoned. This is the option to reach for when you do not yet know where the
+cost lies -- exploring `m` that are not prime powers, say.
+
+```sh
+./build/egz-solver --ring F_4 --max-work 200000
+```
+
+A unit is one step of the search that had to recurse: an `e_m` evaluation that
+missed the memo, or a call into the counterexample enumeration. Memo hits are
+free, so the count tracks work actually done rather than cells visited. The
+budget is per cell, so one abandoned cell does not penalise the next, and
+whatever was memoised before an abort stays available.
+
+Abandoned cells are written as `?` and reported on stderr. They are never left
+blank, which would be indistinguishable from "no EGZ constant exists":
+
+```
+2       3       3               3       ?               ?       ?
+```
+
+A budget only costs you answers, it never changes them: any cell that finishes
+under a budget holds exactly the value an unbudgeted run produces. Raising the
+budget can only turn `?` into a value, never alter one.
+
 ## Output format
 One `.tsv` per ring, named `EGZ_<ring>.tsv`. **Rows are `m`, columns are `t`, and
 a cell holds `EGZ(t, m) - t`, not `EGZ(t, m)` itself.** The first row is the `t`
@@ -93,6 +122,9 @@ A cell is blank in any of these cases, which the format does not distinguish:
  - `t >= T_MAX(m)` — beyond the requested bound.
  - `EGZ(t, m) - t <= -1`, including `EGZ(t, m) == 0`, which is the solver's way
    of reporting that no EGZ constant exists for that `(t, m)`.
+
+A cell holding `?` was abandoned under `--max-work`; see
+[Bounding the work per cell](#bounding-the-work-per-cell).
 
 A row left out by `--skip` is absent from the file rather than written blank, so
 "not computed" stays distinguishable from the cases above.

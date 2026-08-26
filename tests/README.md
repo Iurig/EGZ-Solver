@@ -66,6 +66,17 @@ as `skip_rules`.
 python tests/test_skip.py build/egz-solver
 ```
 
+## Work budgets
+
+`test_max_work.py` checks the property that makes `--max-work` safe to use: a
+cell that completes under a budget equals the cell an unbudgeted run produces,
+no cell is invented, and none is silently dropped. It also checks that a larger
+budget never solves fewer cells. Runs under `ctest` as `max_work`.
+
+```sh
+python tests/test_max_work.py build/egz-solver
+```
+
 ## Verifying against the published theorems
 
 `verify_against_thesis.py` checks the committed tables against the results

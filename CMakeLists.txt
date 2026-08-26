@@ -58,6 +58,11 @@ if(Python3_Interpreter_FOUND)
   add_test(NAME skip_rules
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_skip.py
                    $<TARGET_FILE:egz-solver>)
+
+  # Checks that --max-work only ever costs answers, never changes them.
+  add_test(NAME max_work
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_max_work.py
+                   $<TARGET_FILE:egz-solver>)
 else()
   message(STATUS "Python3 not found; skipping the thesis_verification test")
 endif()
