@@ -78,7 +78,8 @@ def load(path):
     """
     raw = io.open(path, "rb").read().decode("utf-8")
     rows = {}
-    for line in raw.split("\r\n")[1:]:
+    # splitlines() so the checks do not depend on the checkout's line endings.
+    for line in raw.splitlines()[1:]:
         f = line.split("\t")
         if not f or not f[0]:
             continue
@@ -88,7 +89,7 @@ def load(path):
 
 def widths(path):
     raw = io.open(path, "rb").read().decode("utf-8")
-    lines = [l for l in raw.split("\r\n") if l]
+    lines = [l for l in raw.splitlines() if l]
     return lines[0].split("\t"), [len(l.split("\t")) for l in lines]
 
 
@@ -134,7 +135,7 @@ def check_blank_rule(tables, rep):
         ch, limit = meta["char"], meta["t_limit"]
         raw = io.open(path, "rb").read().decode("utf-8")
         table_bad = 0
-        for line in raw.split("\r\n")[1:]:
+        for line in raw.splitlines()[1:]:
             f = line.split("\t")
             if not f or not f[0]:
                 continue

@@ -1,0 +1,25 @@
+# Normalise line endings so a clone is byte-identical on every platform, rather
+# than depending on each contributor's core.autocrlf setting. Text is stored as
+# LF in the repository and checked out in the platform's native form.
+#
+# The tables matter most here: the solver writes them through a text-mode
+# stream, so a Windows run produces CRLF and a Linux run produces LF. Without
+# this, regenerating a table on the other platform would show every line as
+# changed. The tools that read them are line-ending agnostic either way.
+
+* text=auto
+
+*.cpp     text
+*.hpp     text
+*.py      text
+*.md      text
+*.tsv     text
+*.cff     text
+*.txt     text
+LICENSE   text
+CMakeLists.txt   text
+.clang-format    text
+.gitattributes   text
+.gitignore       text
+
+*.pdf     binary
