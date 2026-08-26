@@ -5,8 +5,8 @@ message: >-
   "preferred-citation" below.
 type: software
 authors:
-  - family-names: Carvalho
-    given-names: Iuri Grangeiro
+  - family-names: Grangeiro Carvalho
+    given-names: Iuri
 repository-code: "https://github.com/Iurig/EGZ-Solver"
 abstract: >-
   A C++ brute-force calculator for arbitrary degree Erdős-Ginzburg-Ziv
@@ -25,9 +25,10 @@ preferred-citation:
   type: thesis
   title: Higher Degree Erdős-Ginzburg-Ziv Constants over Rings
   authors:
-    - family-names: Carvalho
-      given-names: Iuri Grangeiro
+    - family-names: Grangeiro Carvalho
+      given-names: Iuri
   year: 2026
+  thesis-type: "Master's thesis"
   institution:
     name: Instituto de Matemática e Estatística, Universidade de São Paulo
     city: São Paulo

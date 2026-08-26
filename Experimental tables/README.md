@@ -1,6 +1,6 @@
 # Experimental tables
 
-Computed Erdös-Ginzburg-Ziv constants, one `.tsv` per ring, produced by the
+Computed Erdős-Ginzburg-Ziv constants, one `.tsv` per ring, produced by the
 solver in this repository.
 
 **Rows are `m`, columns are `t`, and a cell holds `EGZ(t, m) - t`, not
@@ -19,8 +19,9 @@ a summary is at <https://creativecommons.org/licenses/by/4.0/>.
 You are free to share and adapt the data, including commercially, provided you
 give appropriate credit. A citation of the form
 
-> Iuri Grangeiro Carvalho, *EGZ Solver experimental tables*, 2026.
-> Licensed under CC BY 4.0.
+> Iuri Grangeiro Carvalho, *Higher Degree Erdős-Ginzburg-Ziv Constants over
+> Rings*, Master's thesis, Instituto de Matemática e Estatística, Universidade
+> de São Paulo, 2026. Data licensed under CC BY 4.0.
 
 is sufficient.
 
