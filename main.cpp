@@ -67,6 +67,10 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
       }
       output_file << e - t;
     }
+    // A row can take minutes, and a whole table hours. Flushing here means an
+    // interrupted run leaves every row it finished, rather than however much
+    // happened to be past the buffer.
+    output_file.flush();
   }
 
   if (abandoned > 0) {

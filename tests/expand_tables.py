@@ -26,7 +26,8 @@ Options:
   --add-cols N      how many more t to attempt (default 4)
   --max-work N      per-cell work budget passed through (default 0, unlimited)
   --method WHICH    top-down or bottom-up (default: the solver's own default)
-  --timeout SECONDS per-ring wall clock limit; the table is left untouched if hit
+  --timeout SECONDS per-ring wall clock limit. Rows finished before it are still
+                    merged; the row in progress is dropped
   --dry-run         report what would change, write nothing
 """
 
@@ -43,9 +44,13 @@ ABANDONED = "?"
 
 
 def read_table(path):
-    """Returns (header_t_values, {m: {t: text}}) with text '' for blank."""
+    """Returns (header_t_values, {m: {t: text}}) with text '' for blank, or
+    (None, None) when there is not even a header yet -- which is what a run
+    killed early can leave behind, its output stream still buffered."""
     raw = io.open(path, "rb").read().decode("utf-8")
     lines = raw.splitlines()
+    if not lines or not lines[0].startswith("\t"):
+        return None, None
     header = lines[0].split("\t")
     ts = [int(x) for x in header[1:]]
     rows = {}
@@ -68,11 +73,16 @@ def write_table(path, ts, rows):
 
 def merge(old_rows, new_rows, ts, name, problems):
     """Published values win; new values only fill cells that had none."""
-    merged, gained, kept, still_open = {}, 0, 0, 0
+    merged, gained, kept, still_open, outside = {}, 0, 0, 0, 0
     for m in sorted(set(old_rows) | set(new_rows)):
         old, new = old_rows.get(m, {}), new_rows.get(m, {})
         row = {}
         for t in ts:
+            if t < m:
+                # Left of the diagonal: never computed by convention, not open.
+                row[t] = ABANDONED
+                outside += 1
+                continue
             o, n = old.get(t), new.get(t)
             has_o = o is not None and o != ABANDONED
             has_n = n is not None and n != ABANDONED
@@ -91,7 +101,7 @@ def merge(old_rows, new_rows, ts, name, problems):
                 row[t] = ABANDONED
                 still_open += 1
         merged[m] = row
-    return merged, gained, kept, still_open
+    return merged, gained, kept, still_open, outside
 
 
 def main():
@@ -139,28 +149,42 @@ def main():
             cmd += ["--method", args.method]
 
         tmp = tempfile.mkdtemp()
-        started = time.time()
+        produced = os.path.join(tmp, name)
+        started, partial = time.time(), False
         try:
             cmd += ["--out-dir", tmp]
-            proc = subprocess.run(cmd, capture_output=True, timeout=args.timeout)
+            try:
+                proc = subprocess.run(cmd, capture_output=True, timeout=args.timeout)
+                if proc.returncode != 0:
+                    print("    solver exited %d: %s" % (proc.returncode, proc.stderr.decode(errors="replace")[:200]))
+                    failures += 1
+                    continue
+            except subprocess.TimeoutExpired:
+                # The solver writes rows as it finishes them, so a timeout still
+                # leaves whatever it got through on disk. Salvaging that is what
+                # makes a long run worth starting at all -- but the row it was
+                # in the middle of is dropped, since a half-written row would
+                # merge in as a row of blanks and blanks are answers.
+                partial = True
             elapsed = time.time() - started
-            if proc.returncode != 0:
-                print("    solver exited %d: %s" % (proc.returncode, proc.stderr.decode(errors="replace")[:200]))
-                failures += 1
-                continue
-            produced = os.path.join(tmp, name)
             if not os.path.exists(produced):
-                print("    solver wrote no %s" % name)
+                print("    %.0fs: nothing written%s" % (elapsed, " before the timeout" if partial else ""))
                 failures += 1
                 continue
             new_ts, new_rows = read_table(produced)
-            merged, gained, kept, still_open = merge(old_rows, new_rows, new_ts, ring, problems)
-            print("    %.0fs: %d cells gained, %d kept, %d still open" % (elapsed, gained, kept, still_open), flush=True)
+            if new_ts is None:
+                print("    %.0fs: nothing usable written%s" % (elapsed, " before the timeout" if partial else ""))
+                failures += 1
+                continue
+            if partial and new_rows:
+                new_rows.pop(max(new_rows), None)
+            merged, gained, kept, still_open, outside = merge(old_rows, new_rows, new_ts, ring, problems)
+            print("    %.0fs%s: %d gained, %d kept, %d still open, %d outside the diagonal"
+                  % (elapsed, " (timed out, partial)" if partial else "", gained, kept, still_open, outside), flush=True)
+            if partial:
+                failures += 1
             if not args.dry_run and not problems:
                 write_table(path, new_ts, merged)
-        except subprocess.TimeoutExpired:
-            print("    timed out after %.0fs; table left untouched" % (time.time() - started), flush=True)
-            failures += 1
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 

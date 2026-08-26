@@ -33,4 +33,14 @@ struct ConditionalFileStream {
       output_file << v;
     return *this;
   }
+
+  // Pushes what has been written so far to disk. A full table takes hours, so
+  // the caller flushes after each row: a run that is interrupted, or watched
+  // from another shell, then shows every row it actually finished instead of
+  // whatever happened to be past the stream's buffer. Rows are small and cost
+  // minutes to compute, so the flush is free by comparison.
+  void flush() {
+    if (enabled)
+      output_file.flush();
+  }
 };
