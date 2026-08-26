@@ -15,7 +15,11 @@ private:
   int _size = 0;
 
 public:
-  static constexpr int n = R::order;
+  // Not constexpr: a runtime ring (see quotient.hpp) fixes its order when the
+  // spec is parsed, not when the binary is compiled. Nothing here needs it in a
+  // constant expression, and it must stay assignable -- sequences are copied by
+  // value throughout the search.
+  int n = R::order;
   sequence() { c = std::vector<int>(n); }
   R element() {
     for (int i = n - 1; i >= 0; i--)
@@ -32,12 +36,16 @@ public:
     c[x.value] += a;
   }
   std::size_t size() { return _size; }
-  long long identifier() const {
-    long long h = 0;
-    long long t = 1;
+  // Unsigned so that the wraparound is defined: T_MAX()^(order-1) passes 2^64
+  // once the ring is large enough, and signed overflow would be undefined
+  // behaviour rather than a collision. A collision is harmless here -- see
+  // operator== below, which decides membership exactly.
+  unsigned long long identifier() const {
+    unsigned long long h = 0;
+    unsigned long long t = 1;
     for (int i = 1; i < R::order; i++) {
-      h += t * c[i];
-      t *= T_MAX();
+      h += t * (unsigned long long)c[i];
+      t *= (unsigned long long)T_MAX();
     }
     return h;
   }

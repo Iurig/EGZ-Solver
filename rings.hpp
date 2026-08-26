@@ -42,8 +42,10 @@ class Zn : public ring {
 public:
   static constexpr int characteristic = n, order = n, unit = 1;
 
-  // Constructor
-  Zn(int value = 0) : ring(value % n) {}
+  // Constructor. The double reduction is not redundant: C++ keeps the sign of
+  // the dividend, so a bare value % n leaves operator- below returning a
+  // negative value, and sequence indexes its storage by it.
+  Zn(int value = 0) : ring(((value % n) + n) % n) {}
 
   // Operator +
   Zn operator+(const Zn &other) const { return Zn(value + other.value); }

@@ -80,7 +80,12 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
 static void usage() {
   cout << "usage: egz-solver [options]\n"
        << "\n"
-       << "  --ring NAME     ring to compute (default: Z_2); --list-rings to see all\n"
+       << "  --ring NAME     ring to compute (default: Z_2); --list-rings to see all.\n"
+       << "                  Also accepts a quotient built at run time:\n"
+       << "                    Z_n[x]/(P)   e.g. 'Z_2[x]/(x^2+x+1)', 'Z_4[x]/(x^2+1)'\n"
+       << "                    Z_nx_by_P    the same ring, spelled the way it is named\n"
+       << "                  P needs degree >= 1 and a leading coefficient invertible\n"
+       << "                  mod n; the second spelling needs no shell quoting.\n"
        << "  --m-min N       first m to compute (default: 1)\n"
        << "  --m-max N       exclusive upper bound on m (default: " << M_MAX() << ")\n"
        << "  --t-max N       exclusive upper bound on t (default: " << T_MAX() << ")\n"
@@ -140,6 +145,11 @@ int main(int argc, char **argv) {
     } else if (arg == "--list-rings") {
       for (const string &n : ringNames())
         cout << n << endl;
+      // On stderr so that piping --list-rings still yields names alone.
+      cerr << "\n--ring also accepts a quotient built at run time, Z_n[x]/(P) with P of\n"
+              "degree >= 1 and a leading coefficient invertible mod n, for example\n"
+              "  --ring 'Z_2[x]/(x^2+x+1)'   --ring 'Z_4[x]/(x^2+1)'\n"
+              "Such a ring is named Z_nx_by_P, which --ring accepts too and needs no quoting.\n";
       return 0;
     } else if (arg == "--ring") {
       if (i + 1 >= argc) {
@@ -194,21 +204,30 @@ int main(int argc, char **argv) {
   setWorkBudget(max_work);
 
   int bad_spec = 0;
-  bool known = dispatchRing(ring, [&](auto tag) {
-    using R = typename decltype(tag)::type;
-    SkipRule skip;
-    for (const string &spec : skip_specs) {
-      string error;
-      if (!skip.add(spec, R::order, error)) {
-        cerr << "--skip " << spec << ": " << error << endl;
-        bad_spec = 2;
-        return;
-      }
-    }
-    findEGZs<R>(m_max, m_min, out_dir, to_file, quiet, skip);
-  });
+  string ring_error;
+  bool known = dispatchRing(
+      ring,
+      [&](auto tag) {
+        using R = typename decltype(tag)::type;
+        SkipRule skip;
+        for (const string &spec : skip_specs) {
+          string error;
+          if (!skip.add(spec, R::order, error)) {
+            cerr << "--skip " << spec << ": " << error << endl;
+            bad_spec = 2;
+            return;
+          }
+        }
+        findEGZs<R>(m_max, m_min, out_dir, to_file, quiet, skip);
+      },
+      &ring_error);
   if (!known) {
-    cerr << "unknown ring: " << ring << " (try --list-rings)" << endl;
+    // A quotient spec that failed to parse gets its own message; anything else
+    // is just a name nothing answers to.
+    if (!ring_error.empty())
+      cerr << "--ring " << ring << ": " << ring_error << endl;
+    else
+      cerr << "unknown ring: " << ring << " (try --list-rings)" << endl;
     return 2;
   }
   return bad_spec;

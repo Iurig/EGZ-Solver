@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Check the ring implementations: axioms, stability, and planned equivalences.
+"""Check the rings themselves: axioms, stability, and the quotient equivalences.
 
-    python tests/test_rings.py path/to/dump_ring [--goldens tests/ring_goldens.tsv]
+    python tests/test_rings.py path/to/dump_ring [--solver path/to/egz-solver]
 
-Four things are checked, in increasing order of what they buy you.
+Five things are checked, in increasing order of what they buy you.
 
 1. Every registered ring satisfies the commutative-unit-ring axioms. The solver
    assumes them everywhere and would not fail loudly if they broke: a bad
@@ -13,18 +13,23 @@ Four things are checked, in increasing order of what they buy you.
    Experimental tables/ were computed with these exact operation tables, so a
    silent change to one invalidates data already committed.
 
-3. A reference implementation of Z_n[x]/(P) -- twenty lines at the bottom of
-   this file, independent of anything in C++ -- reproduces the goldens of the
-   rings it is supposed to generalise. This runs today, before any generic ring
-   exists, and is what pins down the encoding: basis {1, x, ..., x^(d-1)} with
-   an element (a_0..a_(d-1)) at index sum(a_i * n^i).
+3. A reference implementation of Z_n[x]/(P) in this file, independent of
+   anything in C++, reproduces the goldens of the rings it generalises. It needs
+   no build, and it is what pins down the encoding: basis {1, x, ..., x^(d-1)}
+   with an element (a_0..a_(d-1)) at index sum(a_i * n^i).
 
-4. Once the generic ring is implemented and registered, it must agree with both.
-   Until then those entries report PEND.
+4. The runtime quotient in quotient.hpp, asked for by --ring spec, agrees with
+   both the reference and the golden -- and reports a name that can go in a file
+   name, since it becomes EGZ_<name>.tsv. A spec the binary does not accept
+   reports PEND rather than passing silently.
 
-Point 3 is the load-bearing one. It says the target is reachable and the
-encoding convention is right, so the eventual C++ has a fixed thing to hit
-rather than one fitted to whatever it happens to produce.
+5. With --solver, a small EGZ table computed for the spec is compared against
+   one computed for the ring it generalises. Equal operation tables do not by
+   themselves mean equal output: this is the check that the memo, e_m and the
+   counterexample search behave the same too.
+
+Point 3 was written before the implementation existed, which is why the target
+is a fixed thing to hit rather than one fitted to whatever came out.
 """
 
 import argparse
@@ -33,6 +38,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 
 # --- what the planned generic quotient ring has to reproduce ------------------
 # Under the encoding above, Z_n[x]/(P) does not merely become *isomorphic* to
@@ -188,6 +194,23 @@ def run(dumper, *a):
     return proc.stdout.decode()
 
 
+def solver_table(solver, ring, tmp, tag):
+    """One small EGZ table for `ring`, as text. None if the solver refused.
+
+    Written into an empty directory of its own because the file is named after
+    the ring, and a spec's name is exactly what is under test."""
+    out = os.path.join(tmp, tag)
+    os.makedirs(out, exist_ok=True)
+    proc = subprocess.run([solver, "--ring", ring, "--m-max", "7", "--t-max", "12",
+                           "--quiet", "--out-dir", out], capture_output=True)
+    if proc.returncode != 0:
+        return None
+    files = [f for f in os.listdir(out) if f.endswith(".tsv")]
+    if len(files) != 1:
+        return None
+    return io.open(os.path.join(out, files[0]), "rb").read().decode("utf-8")
+
+
 def try_run(dumper, spec):
     """Asks the binary for one ring by spec. Returns None if it does not know
     it, which is how an unimplemented entry reports PEND rather than failing."""
@@ -270,6 +293,7 @@ def main():
     ap.add_argument("dumper", help="path to the dump_ring binary")
     here = os.path.dirname(os.path.abspath(__file__))
     ap.add_argument("--goldens", default=os.path.join(here, "ring_goldens.tsv"))
+    ap.add_argument("--solver", help="path to egz-solver; adds the end-to-end table comparison")
     args = ap.parse_args()
 
     # Windows CreateProcess rejects a relative path written with forward slashes.
@@ -326,8 +350,9 @@ def main():
             continue
         ref = reference(n, poly, spec)
         # The name becomes EGZ_<name>.tsv, so it cannot be the spec verbatim.
-        check("%-18s has a file-safe name" % spec, bool(SAFE_NAME.match(got.name)),
-              "name %r is not usable in a file name" % got.name)
+        ok_name = bool(SAFE_NAME.match(got.name))
+        check("%-18s has a file-safe name" % spec, ok_name,
+              repr(got.name) if ok_name else "%r cannot go in EGZ_<name>.tsv" % got.name)
         ok_ref = got.key() == ref.key()
         check("%-18s matches the reference Z_%d[x]/(%s)" % (spec, n, render(n, poly)), ok_ref,
               "" if ok_ref else "differs from the reference" + isomorphism_hint(got, ref))
@@ -336,6 +361,25 @@ def main():
             ok_gold = got.key() == gold.key()
             check("%-18s %s" % (spec, why), ok_gold,
                   "" if ok_gold else "differs from the %s golden%s" % (target, isomorphism_hint(got, gold)))
+
+    if args.solver:
+        solver = os.path.abspath(args.solver)
+        if not os.path.exists(solver) and os.path.exists(solver + ".exe"):
+            solver += ".exe"
+        print("\nEnd to end: a small EGZ table from each pair, through the whole solver:")
+        with tempfile.TemporaryDirectory() as tmp:
+            for i, (spec, _, _, target, why) in enumerate(EXPECTED):
+                a = solver_table(solver, spec, tmp, "a%d" % i)
+                b = solver_table(solver, target, tmp, "b%d" % i)
+                if a is None or b is None:
+                    check("%-18s vs %s" % (spec, target), False,
+                          "the solver would not compute %s" % (spec if a is None else target))
+                    continue
+                # Equal tables here mean more than equal operation tables: the
+                # same values came out of e_m, the counterexample search and the
+                # memo, not just out of + and *.
+                check("%-18s table identical to %s" % (spec, target), a == b,
+                      "" if a == b else "tables differ")
 
     print()
     if pending:

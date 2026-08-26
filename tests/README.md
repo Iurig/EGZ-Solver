@@ -84,10 +84,11 @@ under `ctest` as `rings`.
 
 ```sh
 python tests/test_rings.py build/dump_ring
+python tests/test_rings.py build/dump_ring --solver build/egz-solver   # adds end to end
 ```
 
 `dump_ring` prints a ring's order, characteristic, unit and full operation
-tables; `ring_goldens.tsv` holds a dump of every registered ring. Four things
+tables; `ring_goldens.tsv` holds a dump of every registered ring. Five things
 are checked:
 
  - **Axioms.** Every registered ring is a commutative unit ring, verified over
@@ -99,15 +100,22 @@ are checked:
  - **The reference quotient.** A short, independent implementation of
    `Z_n[x]/(P)` in the test file reproduces the goldens of `Z_2`, `Z_3`, `Z_5`,
    `Z_2x_by_x2` and `F_4` exactly.
- - **The implementation, once it exists.** Each entry in `EXPECTED` is asked for
-   by `--ring` spec. Specs the binary does not accept yet report `PEND`.
+ - **The runtime quotient.** Each entry in `EXPECTED` is asked for by `--ring`
+   spec and must agree with both the reference and the golden, and must report a
+   name usable in `EGZ_<name>.tsv`. A spec the binary does not accept reports
+   `PEND` rather than passing silently.
+ - **End to end.** With `--solver`, a small EGZ table computed for the spec is
+   compared against one computed for the ring it generalises. Equal operation
+   tables do not by themselves mean equal output; this covers `e_m`, the
+   counterexample search and the memo as well.
 
-The third point is the one that pays for the file. `Z_n[x]/(P)` with the basis
+The reference is the one that pays for the file. `Z_n[x]/(P)` with the basis
 `{1, x, ..., x^(d-1)}` and an element `(a_0..a_(d-1))` at index `sum(a_i n^i)`
 does not merely become *isomorphic* to the ring it generalises -- it becomes
 *identical*, same elements and same indices -- so the check is exact table
-equality rather than a search for an isomorphism. Writing it before the generic
-ring exists fixes the target in advance instead of fitting it afterwards.
+equality rather than a search for an isomorphism. It was written before the
+generic ring existed, which is why the target is a fixed thing to hit rather than
+one fitted to whatever came out.
 
 It discriminates: the three order-4 characteristic-2 rings in the registry
 (`F_4`, `Z_2x_by_x2`, `Z_2^2`) are told apart from each other, and a wrong

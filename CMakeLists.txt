@@ -69,11 +69,13 @@ if(Python3_Interpreter_FOUND)
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_max_work.py
                    $<TARGET_FILE:egz-solver>)
 
-  # Ring axioms, plus the goldens that say which rings must come out identical.
+  # Ring axioms, the goldens that say which rings must come out identical, and
+  # the runtime Z_n[x]/(P) quotients that have to reproduce them.
   add_test(NAME rings
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_rings.py
                    $<TARGET_FILE:dump_ring>
-                   --goldens ${CMAKE_CURRENT_SOURCE_DIR}/tests/ring_goldens.tsv)
+                   --goldens ${CMAKE_CURRENT_SOURCE_DIR}/tests/ring_goldens.tsv
+                   --solver $<TARGET_FILE:egz-solver>)
 else()
   message(STATUS "Python3 not found; skipping the thesis_verification test")
 endif()

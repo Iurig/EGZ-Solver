@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "quotient.hpp"
 #include "rings.hpp"
 
 // Type tag, so a ring can be handed to a visitor without being instantiated.
@@ -27,11 +28,26 @@ bool dispatchRingImpl(const std::string &name, Visitor &visitor, ring_list<Rs...
   return found;
 }
 
-// Calls visitor with a ring_tag<R> for the ring named `name`.
-// Returns false if no ring has that name.
+// Calls visitor with a ring_tag<R> for the ring `name` denotes: one of the
+// compiled-in rings above, or a quotient spec such as Z_2[x]/(x^2+x+1), which
+// is built at run time and visited as ring_tag<Quotient>.
+//
+// Returns false if the name is neither. When it is a malformed quotient spec
+// rather than an unknown name, `error` is set to say what is wrong with it.
 template <typename Visitor>
-bool dispatchRing(const std::string &name, Visitor &&visitor) {
-  return dispatchRingImpl(name, visitor, AllRings{});
+bool dispatchRing(const std::string &name, Visitor &&visitor, std::string *error = nullptr) {
+  // Compiled-in rings win: Z_2x_by_x2 is both a registered name and a valid
+  // spec, and the registered ring is the one the published table was made with.
+  if (dispatchRingImpl(name, visitor, AllRings{}))
+    return true;
+  std::string why;
+  if (configureQuotient(name, why)) {
+    visitor(ring_tag<Quotient>{});
+    return true;
+  }
+  if (error && looksLikeQuotient(name))
+    *error = why;
+  return false;
 }
 
 template <typename... Rs>

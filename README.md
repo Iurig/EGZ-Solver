@@ -6,6 +6,8 @@ A C++ brute-force calculator for arbitrary degree Erdös-Ginzburg-Ziv constants 
  - $𝔽_4$.
  - $\frac{ℤ_2[x]}{x^2}$
  - Products of any two of the above, via `product<R, P>` (e.g. `Z_2xZ_2`).
+ - $ℤ_n[x]/(P)$ for any $P$ of degree $\ge 1$, built at run time from a string
+   and needing no recompilation. See [Runtime rings](#runtime-rings).
 
 `--list-rings` prints the instantiations the binary was built with; see
 [Adding a ring](#adding-a-ring) to expose more.
@@ -198,6 +200,45 @@ See [tests/README.md](tests/README.md).
 Everything but `main.cpp` is a header, so the project builds as one translation
 unit. Each header is self-contained and guarded with `#pragma once`.
 
+## Runtime rings
+
+Every ring above is a C++ type fixed when the binary is compiled. `--ring` also
+accepts a quotient written out as a string, which is built while the program
+starts:
+
+```sh
+./build/egz-solver --ring 'Z_2[x]/(x^2+x+1)'
+./build/egz-solver --ring 'Z_4[x]/(x^2+1)'
+./build/egz-solver --ring Z_2x_by_x2+x+1      # the same ring, no quoting needed
+```
+
+`P` must have degree at least 1 and a leading coefficient invertible mod `n`;
+such a `P` is divided through by it and stored monic. That requirement is not
+bureaucratic. Reduction works by rewriting $x^d$ as $-(P_0 + \dots + P_{d-1}
+x^{d-1})$, which is only a rewrite rule when the leading coefficient is a unit —
+with a zero divisor there the quotient is not free over $ℤ_n$ and its elements
+have no unique normal form.
+
+The ring has $n^{\deg P}$ elements, with $\{1, x, \dots, x^{d-1}\}$ as a basis
+and $(a_0 \dots a_{d-1})$ stored at index $\sum a_i n^i$. Its characteristic is
+exactly $n$: a monic $P$ of degree $\ge 1$ generates an ideal containing no
+nonzero constant, so nothing collapses. Operation tables are built once at
+startup, so the inner loop costs the same table lookup the hand-written rings
+cost. Rings are capped at 256 elements, far past what is searchable.
+
+A ring is named `Z_nx_by_P`, which is what `EGZ_<name>.tsv` is keyed on, and
+which `--ring` accepts back — so a name always names one ring.
+
+Two consequences worth knowing:
+
+ - `Z_2[x]/(x^2)` and `Z_2[x]/(x^2+x+1)` are the hand-written `Z_2x_by_x2` and
+   `F_4`. They produce byte-identical operation tables *and* byte-identical EGZ
+   tables; `tests/test_rings.py` checks both. The compiled-in rings still win
+   when a name matches, since the published tables were computed with them.
+ - Unlike the compiled-in rings, `order` here is not a compile-time constant.
+   `sequence` and `EGZSolver` only ever read `R::order` as a value, so this
+   costs nothing, but it is why `sequence::n` is a plain member.
+
 ## Adding a ring
 1. Implement the ring in `rings.hpp`. Use `class ring` as the checklist of what
    is required: a `static constexpr int characteristic`, `order`, and `unit`, a
@@ -206,7 +247,17 @@ unit. Each header is self-contained and guarded with `#pragma once`.
    agree with that indexing.
 2. Add the type to `AllRings` in `ring_registry.hpp`. It is then selectable by
    its `name()` via `--ring`.
+3. Regenerate `tests/ring_goldens.tsv` with `./build/dump_ring --all > …`, so the
+   new ring is covered by the axiom and stability checks in `tests/test_rings.py`.
+
 Rows are left out with `--skip` at run time, so a ring needs no hook for that.
+
+A quotient of $ℤ_n[x]$ needs none of this — see [Runtime rings](#runtime-rings).
+Extending that to several variables means changing `buildBasis()` in
+`quotient.hpp` and nothing else: the ring is described by a basis of monomials
+plus the expansion of each pairwise product of basis monomials back into that
+basis, and everything downstream is written against that rather than against
+powers of a single `x`.
 
 ## License
 
