@@ -1,4 +1,4 @@
-# Regression cases extracted from the tables in experimental-tables/.
+# Regression cases extracted from the tables in Experimental tables/.
 # Each line asserts EGZ(t, m) == expected_EGZ for the named ring.
 # Regenerate with tests/table_probe.cpp; see tests/README.md.
 # ring	m	t	expected_EGZ

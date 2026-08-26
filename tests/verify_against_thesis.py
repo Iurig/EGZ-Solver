@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify the published tables in experimental-tables/ against the thesis results.
+"""Verify the published tables in Experimental tables/ against the thesis results.
 
 Every check here restates a result from the thesis and applies it to the
 committed data. The theorem statements are inlined, so this script needs only
@@ -358,7 +358,7 @@ def check_theorem_2_2(solver, rep, m_max=20, t_max=30):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     here = os.path.dirname(os.path.abspath(__file__))
-    ap.add_argument("--tables", default=os.path.join(os.path.dirname(here), "experimental-tables"),
+    ap.add_argument("--tables", default=os.path.join(os.path.dirname(here), "Experimental tables"),
                     help="directory holding the EGZ_*.tsv tables")
     ap.add_argument("--solver", help="path to the egz-solver binary; enables the Theorem 2.2 check")
     args = ap.parse_args()

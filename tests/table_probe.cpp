@@ -1,4 +1,4 @@
-// Development tool: replays cells from an existing table in experimental-tables/
+// Development tool: replays cells from an existing table in Experimental tables/
 // against the current solver, timing each one. Used to generate the regression
 // fixture in tests/regression_cases.tsv -- see tests/README.md.
 //

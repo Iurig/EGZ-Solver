@@ -1,5 +1,5 @@
 // Regression suite: replays known-good EGZ values taken from the published
-// tables in experimental-tables/ and fails if the solver disagrees.
+// tables in Experimental tables/ and fails if the solver disagrees.
 //
 //   run_regression [path-to-regression_cases.tsv]
 #include <cstdlib>

@@ -1,7 +1,7 @@
 # Tests
 
 `run_regression` replays known-good `EGZ(t, m)` values against the current
-solver. The values come from the tables in `experimental-tables/`, so the suite
+solver. The values come from the tables in `Experimental tables/`, so the suite
 answers one question: *does the code still produce the numbers this project has
 already published?*
 
@@ -41,7 +41,7 @@ the stored value, and prints the result with a timing:
 
 ```sh
 cmake --build build --target table_probe
-./build/table_probe Z_3 experimental-tables/EGZ_Z_3.tsv 150
+./build/table_probe Z_3 "Experimental tables/EGZ_Z_3.tsv" 150
 ```
 
 The third argument is a per-cell budget in milliseconds; once a cell exceeds it

@@ -29,7 +29,7 @@ if(EGZ_DEBUG)
   target_compile_definitions(egz-solver PRIVATE DEBUG)
 endif()
 
-# The regression suite replays values from experimental-tables/, which reach
+# The regression suite replays values from Experimental tables/, which reach
 # m=37 and large multiplicities, so it needs bounds well above the defaults.
 add_executable(run_regression tests/run_regression.cpp)
 target_link_libraries(run_regression PRIVATE egz-core)
@@ -51,7 +51,7 @@ find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
   add_test(NAME thesis_verification
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/verify_against_thesis.py
-                   --tables ${CMAKE_CURRENT_SOURCE_DIR}/experimental-tables
+                   --tables "${CMAKE_CURRENT_SOURCE_DIR}/Experimental tables"
                    --solver $<TARGET_FILE:egz-solver>)
 else()
   message(STATUS "Python3 not found; skipping the thesis_verification test")

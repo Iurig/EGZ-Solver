@@ -40,13 +40,13 @@ same either way.
 | `--m-min N` | First `m` to compute (default 1). |
 | `--m-max N` | Exclusive upper bound on `m`. |
 | `--t-max N` | Exclusive upper bound on `t`. |
-| `--out-dir DIR` | Where to write the table (default `experimental-tables`). |
+| `--out-dir DIR` | Where to write the table (default `Experimental tables`). |
 | `--no-file` | Print progress only; write nothing. |
 | `--quiet` | Suppress per-value progress output. |
 | `--list-rings` | List supported ring names and exit. |
 
 The output directory is relative to the working directory and is created if
-missing, so run from the repository root to land in `experimental-tables/`.
+missing, so run from the repository root to land in `Experimental tables/`.
 
 Be aware that cost grows steeply in both `m` and `t`: full tables for the larger
 rings take hours, and a single cell deep in a table can take minutes.
@@ -99,7 +99,7 @@ ctest --test-dir build --output-on-failure
 
 Two suites run:
 
- - `regression` replays 164 known-good values sampled from `experimental-tables/`
+ - `regression` replays 164 known-good values sampled from `Experimental tables/`
    across all nine tables.
  - `thesis_verification` checks the committed tables against the theorems proved
    in the accompanying thesis, covering roughly 12,000 cells.
@@ -133,13 +133,13 @@ unit. Each header is self-contained and guarded with `#pragma once`.
 ## License
 
 The code is under the [MIT License](LICENSE); the computed tables in
-`experimental-tables/` are under
-[CC BY 4.0](experimental-tables/LICENSE). Copyright (c) 2026 Iuri Grangeiro
+`Experimental tables/` are under
+[CC BY 4.0](Experimental%20tables/LICENSE). Copyright (c) 2026 Iuri Grangeiro
 Carvalho.
 
 The split is deliberate: Creative Commons licenses are not intended for
 software, and a software license sits awkwardly on what is essentially
 mathematical data. In practice this means you may use the solver freely with
 attribution preserved in the source, and reuse or republish the tables provided
-you give credit. See [experimental-tables/README.md](experimental-tables/README.md)
+you give credit. See [Experimental tables/README.md](Experimental%20tables/README.md)
 for a suggested citation.
