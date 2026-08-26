@@ -3,33 +3,31 @@
 
     python tests/test_rings.py path/to/dump_ring [--solver path/to/egz-solver]
 
-Five things are checked, in increasing order of what they buy you.
+Five checks, in increasing order of what they buy you.
 
 1. Every registered ring satisfies the commutative-unit-ring axioms. The solver
-   assumes them everywhere and would not fail loudly if they broke: a bad
-   multiplication table yields wrong EGZ constants, not a crash.
+   assumes them everywhere and would not fail loudly if they broke -- a bad
+   multiplication table gives wrong EGZ constants, not a crash.
 
-2. Every registered ring still matches its golden dump. The published tables in
-   Experimental tables/ were computed with these exact operation tables, so a
-   silent change to one invalidates data already committed.
+2. Every registered ring still matches its golden dump. The published tables
+   were computed with these exact operation tables, so a silent change to one
+   invalidates data already committed.
 
-3. A reference implementation of Z_n[x]/(P) in this file, independent of
-   anything in C++, reproduces the goldens of the rings it generalises. It needs
-   no build, and it is what pins down the encoding: basis {1, x, ..., x^(d-1)}
-   with an element (a_0..a_(d-1)) at index sum(a_i * n^i).
+3. A reference implementation of Z_n[x]/(P) in this file, independent of the
+   C++, reproduces the goldens of the rings it generalises. It needs no build,
+   and it pins the encoding: basis {1, x, ..., x^(d-1)}, element (a_0..a_(d-1))
+   at index sum(a_i * n^i).
 
-4. The runtime quotient in quotient.hpp, asked for by --ring spec, agrees with
-   both the reference and the golden -- and reports a name that can go in a file
-   name, since it becomes EGZ_<name>.tsv. A spec the binary does not accept
-   reports PEND rather than passing silently.
+4. The runtime quotient in quotient.hpp agrees with both the reference and the
+   golden, and reports a name usable in a file name, since it becomes
+   EGZ_<name>.tsv. A spec the binary rejects reports PEND, not a silent pass.
 
-5. With --solver, a small EGZ table computed for the spec is compared against
-   one computed for the ring it generalises. Equal operation tables do not by
-   themselves mean equal output: this is the check that the memo, e_m and the
-   counterexample search behave the same too.
+5. With --solver, a small EGZ table for the spec is compared against one for the
+   ring it generalises. Equal operation tables do not by themselves mean equal
+   output; this checks that the memo, e_m and the search agree too.
 
-Point 3 was written before the implementation existed, which is why the target
-is a fixed thing to hit rather than one fitted to whatever came out.
+Point 3 was written before the implementation existed, so the target is a fixed
+thing to hit rather than one fitted to whatever came out.
 """
 
 import argparse

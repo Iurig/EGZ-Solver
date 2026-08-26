@@ -3,8 +3,8 @@
 //
 //   run_regression [path-to-regression_cases.tsv] [--method bottom-up]
 //
-// --method picks which implementation replays the fixture. Both must reproduce
-// the published values; see "Two searches" in README.md.
+// --method picks the implementation. Both must reproduce the published values;
+// see "Two searches" in README.md.
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -48,9 +48,8 @@ static std::vector<Case> loadCases(const std::string &path) {
   return cases;
 }
 
-// Replays the fixture with one implementation. Templated on the solver so the
-// two are exercised by identical code -- any difference in the result is a
-// difference between the searches, not between two copies of the harness.
+// Replays the fixture with one implementation. Templated on the solver, so both
+// run identical harness code and any difference is between the searches.
 template <template <typename> class Solver>
 static int replay(const std::map<std::string, std::vector<Case>> &byRing, size_t total) {
   int passed = 0, failed = 0, skipped = 0;

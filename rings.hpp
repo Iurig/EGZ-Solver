@@ -4,36 +4,27 @@
 #include <numeric>
 #include <string>
 
-// Check this class for prerequisites of children classes
+// Base class for the rings below. A ring must also declare characteristic,
+// order and unit as static constexpr ints, and a name().
 class ring {
 public:
   int value;
 
-  // Don't forget declaring a static constexpr int characteristic, order and
-  // unit, as well as name
-
-  // Constructor
   ring(int value = 0) : value(value) {}
 
-  // Virtual destructor to support polymorphic deletion
+  // Virtual, to support polymorphic deletion.
   virtual ~ring() = default;
 
-  // Operator +
   ring operator+(const ring &other);
 
-  // Operator *
   ring operator*(const ring &other);
 
-  // Operator ==
   bool operator==(const ring &other) { return value == other.value; };
 
-  // Operator !=
   bool operator!=(const ring &other) { return value != other.value; };
 
-  // Operator <
   bool operator<(const ring &other) { return value < other.value; };
 
-  // Ring name
   std::string name() { return "ring"; }
 };
 
@@ -42,24 +33,19 @@ class Zn : public ring {
 public:
   static constexpr int characteristic = n, order = n, unit = 1;
 
-  // Constructor. The double reduction is not redundant: C++ keeps the sign of
-  // the dividend, so a bare value % n leaves operator- below returning a
-  // negative value, and sequence indexes its storage by it.
+  // The double reduction is not redundant: C++ keeps the sign of the dividend,
+  // so a bare value % n leaves operator- returning a negative, and sequence
+  // indexes its storage by that.
   Zn(int value = 0) : ring(((value % n) + n) % n) {}
 
-  // Operator +
   Zn operator+(const Zn &other) const { return Zn(value + other.value); }
 
-  // Operator -
   Zn operator-(const Zn &other) const { return Zn(value - other.value); }
 
-  // Operator *
   Zn operator*(const Zn &other) const { return Zn(value * other.value); }
 
-  // Operator <
   bool operator<(const Zn &other) const { return (value < other.value); }
 
-  // Ring name
   static std::string name() { return "Z_" + std::to_string(n); }
 };
 
@@ -98,7 +84,6 @@ public:
     value -= index;
   }
 
-  // Operator +
   Znp operator+(const Znp &other) {
     Znp sum;
     for (int i = 0; i < p; i++) {
@@ -109,7 +94,6 @@ public:
     return sum;
   }
 
-  // Operator *
   Znp operator*(const Znp &other) {
     Znp prod;
     for (int i = 0; i < p; i++) {
@@ -127,7 +111,6 @@ public:
     return 0;
   }
 
-  // Ring name
   static std::string name() { return "Z_" + std::to_string(n) + "^" + std::to_string(p); };
 };
 
@@ -150,16 +133,12 @@ public:
        {0, 3, 2, 1}};              // x+1    0   x+1 x   1
   // clang-format on
 
-  // Constructor
   Z_2_over(int value = 0) : ring(value) {}
 
-  // Operator +
   Z_2_over operator+(const Z_2_over &other) const { return Z_2_over(sum[value][other.value]); }
 
-  // Operator *
   Z_2_over operator*(const Z_2_over &other) const { return Z_2_over(prod[value][other.value]); }
 
-  // Ring name
   static std::string name() { return "Z_2x_by_x2"; }
 };
 
@@ -182,16 +161,12 @@ public:
        {0, 3, 1, 2}};              // x+1    0   x+1 1   x
   // clang-format on
 
-  // Constructor
   F4(int value = 0) : ring(value) {}
 
-  // Operator +
   F4 operator+(const F4 &other) const { return F4(sum[value][other.value]); }
 
-  // Operator *
   F4 operator*(const F4 &other) const { return F4(prod[value][other.value]); }
 
-  // Ring name
   static std::string name() { return "F_4"; }
 };
 
@@ -201,10 +176,10 @@ public:
   static constexpr int characteristic = std::lcm(R::characteristic, P::characteristic), order = R::order * P::order,
                        unit = R::unit * P::order + P::unit;
 
-  // Constructor. Takes an element index in [0, order), like every other ring
-  // here: sequence and TopDownEGZSolver identify elements that way and use the value
-  // to index storage, so a constructor taking a component pair would put
-  // elements out of range. Components are index / P::order and index % P::order.
+  // Takes an element index in [0, order), like every other ring here: the
+  // solvers identify elements that way and index storage by the value, so a
+  // constructor taking a component pair would put elements out of range.
+  // Components are index / P::order and index % P::order.
   product(int index = 0) : ring(index) {}
 
   static product fromParts(int r, int p) { return product(r * P::order + p); }
@@ -212,17 +187,15 @@ public:
   R first() const { return R(value / P::order); }
   P second() const { return P(value % P::order); }
 
-  // Operator +
   product operator+(const product &other) const {
     return fromParts((first() + other.first()).value, (second() + other.second()).value);
   }
 
-  // Operator *
   product operator*(const product &other) const {
     return fromParts((first() * other.first()).value, (second() * other.second()).value);
   }
 
-  // Ring name. Kept free of spaces and brackets: it becomes part of the output
-  // file name, EGZ_<name>.tsv.
+  // Free of spaces and brackets: it becomes part of the output file name,
+  // EGZ_<name>.tsv.
   static std::string name() { return R::name() + "x" + P::name(); };
 };

@@ -14,16 +14,13 @@
 // for a counterexample: a sequence of length l with no zero-e_m subsequence of
 // length t. The first l with none is the answer.
 //
-// This is not the default -- egz_bottom_up.hpp is, and is faster on every ring
-// measured, because each length here starts a fresh search over ground the
-// previous one covered. Two things keep this one:
-//
-//  * It never holds a level of multisets, so it has no memory ceiling.
-//  * It is an independent implementation. It shares nothing with the bottom-up
-//    search but `sequence` and the ring, and the suite holds the two to
-//    producing identical tables. Their agreement is the strongest evidence the
-//    published numbers are right, and it only means something because neither
-//    is written in terms of the other.
+// Not the default -- egz_bottom_up.hpp is faster on every ring measured, since
+// each length here restarts over ground the previous one covered. Two things
+// keep this one: it never holds a level of multisets, so it has no memory
+// ceiling; and it is independent, sharing nothing with the bottom-up search but
+// `sequence` and the ring. The suite holds the two to identical tables, which
+// is the strongest evidence the published numbers are right -- and only means
+// something because neither is written in terms of the other.
 //
 // See "How the search works" in README.md for the comparison.
 template <typename R>
@@ -32,14 +29,14 @@ private:
   // One memo table per m; sized from M_MAX() at construction.
   std::vector<std::unordered_map<sequence<R>, R>> memorized_e_m;
 
-  // Work spent on the cell currently being computed, and whether it ran out.
-  // Counted per EGZ(t, m) call, not per solver, so one abandoned cell does not
-  // penalise the next. Whatever was memoised before the abort stays valid.
+  // Work spent on the cell being computed, and whether it ran out. Counted per
+  // EGZ(t, m), not per solver, so one abandoned cell does not penalise the
+  // next. Whatever was memoised before the abort stays valid.
   long long work = 0;
   bool aborted = false;
 
-  // Charges one unit. Returns true once the budget for this cell is spent, at
-  // which point every enclosing call unwinds without memoising anything.
+  // Charges one unit. True once this cell's budget is spent, at which point
+  // every enclosing call unwinds without memoising anything.
   bool spendWork() {
     if (aborted)
       return true;
@@ -54,11 +51,10 @@ public:
   // Work spent on the most recent EGZ(t, m).
   long long lastWork() const { return work; }
 
-  // Memoized e_m results held, across every degree. This is where essentially
-  // all of this solver's memory goes: each entry is a sequence (a vector of
-  // R::order ints) plus a value, in a hash table node. Reported by
+  // Memoized e_m results across every degree -- essentially all of this
+  // solver's memory, at a sequence plus a value per hash node. Reported by
   // tests/compare_methods.cpp, since the two searches spend memory very
-  // differently and the totals are the point of comparing them.
+  // differently.
   size_t memoEntries() const {
     size_t total = 0;
     for (const auto &table : memorized_e_m)
@@ -87,21 +83,19 @@ public:
     S.remove(x);
     R value = x * e_m(S, m - 1) + e_m(S, m);
     S.insert(x);
-    // If the budget ran out below us, `value` was computed from children that
-    // returned 0 without finishing, so it must not be cached. Defensive rather
-    // than a fix for an observed failure: with the current row-major traversal,
-    // a poisoned entry is only ever re-read by cells that are themselves being
-    // abandoned, and dropping this check leaves the output byte-identical over
-    // every ring and budget tried. It would stop being harmless if cells were
-    // ever visited in a different order.
+    // If the budget ran out below us, `value` came from children that returned
+    // 0 without finishing, so it must not be cached. Defensive, not a fix for
+    // an observed failure: under the current row-major traversal a poisoned
+    // entry is only re-read by cells already being abandoned, and dropping this
+    // check leaves the output byte-identical over every ring and budget tried.
+    // Another visiting order would end that.
     if (aborted)
       return 0;
     memorized_e_m[m][S] = value;
     return value;
   }
 
-  // Checks all subsets of a sequence S of size t whose e_m is 0, returns true
-  // if such subsequence exists, false otherwise
+  // True if S has a subsequence of size t whose e_m is 0.
   bool checkSubsets(int t, int m, sequence<R> &S, int minimum = 0) {
     bool subsetZero = false;
     if (subseq.size() == t && e_m(subseq, m) == 0 && subseq.is_Subsequence_of(S)) {
@@ -132,9 +126,8 @@ public:
     return subsetZero;
   }
 
-  // Tries to find a CounterExample of sequence of size "size" that has no
-  // subsequence of size t whose e_m is 0, returns true if it finds it, false
-  // otherwise
+  // True if some sequence of length `size` has no subsequence of size t whose
+  // e_m is 0 -- a counterexample.
   bool CE(int t, int m, int size, sequence<R> prev = sequence<R>(), int minimum = 0) {
     if (spendWork())
       return false;
@@ -164,9 +157,8 @@ public:
     }
   }
 
-  // Calculates EGZ(t, m) for ring R.
-  // Returns 0 when no EGZ constant exists for this (t, m), and EGZ_ABANDONED
-  // when --max-work ran out before an answer was reached.
+  // EGZ(t, m) for ring R. 0 when no EGZ constant exists for this (t, m),
+  // EGZ_ABANDONED when --max-work ran out first.
   int EGZ(int t, int m) {
     work = 0;
     aborted = false;

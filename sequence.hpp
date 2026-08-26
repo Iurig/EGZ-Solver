@@ -16,9 +16,8 @@ private:
 
 public:
   // Not constexpr: a runtime ring (see quotient.hpp) fixes its order when the
-  // spec is parsed, not when the binary is compiled. Nothing here needs it in a
-  // constant expression, and it must stay assignable -- sequences are copied by
-  // value throughout the search.
+  // spec is parsed, not at compile time. It must also stay assignable, since
+  // sequences are copied by value throughout the search.
   int n = R::order;
   sequence() { c = std::vector<int>(n); }
   R element() {
@@ -36,10 +35,10 @@ public:
     c[x.value] += a;
   }
   std::size_t size() { return _size; }
-  // Unsigned so that the wraparound is defined: T_MAX()^(order-1) passes 2^64
-  // once the ring is large enough, and signed overflow would be undefined
-  // behaviour rather than a collision. A collision is harmless here -- see
-  // operator== below, which decides membership exactly.
+  // Unsigned so the wraparound is defined: T_MAX()^(order-1) passes 2^64 on a
+  // large enough ring, and signed overflow would be undefined behaviour rather
+  // than a collision. A collision is harmless -- operator== below decides
+  // membership exactly.
   unsigned long long identifier() const {
     unsigned long long h = 0;
     unsigned long long t = 1;
@@ -49,12 +48,11 @@ public:
     }
     return h;
   }
-  // Exact counterpart to identifier(), which hashes multiplicities of the
-  // non-zero elements only. Ignoring c[0] is deliberate and sound for the
-  // memoized quantity: adding a zero element contributes 0 * e_{m-1}, so
-  // e_m is unchanged by it, and conflating those sequences keeps the memo
-  // much smaller. Comparing the counts rather than the identifiers means a
-  // hash collision costs a bucket probe instead of returning a wrong entry.
+  // Exact counterpart to identifier(), which hashes non-zero multiplicities
+  // only. Ignoring c[0] is sound for the memoized quantity -- a zero element
+  // contributes 0 * e_{m-1}, leaving e_m unchanged -- and conflating those
+  // sequences keeps the memo much smaller. Comparing counts rather than
+  // identifiers makes a hash collision cost a probe, not a wrong entry.
   bool operator==(const sequence<R> &o) const {
     for (int i = 1; i < n; i++)
       if (c[i] != o.c[i])

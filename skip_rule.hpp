@@ -4,9 +4,9 @@
 #include <utility>
 #include <vector>
 
-// A predicate on m, built from --skip expressions. Rows it skips are left out
-// of the table entirely rather than written blank, so an absent row means "not
-// computed" and cannot be confused with "no EGZ constant exists".
+// A predicate on m, built from --skip expressions. Skipped rows are left out of
+// the table rather than written blank, so an absent row means "not computed"
+// and cannot be read as "no EGZ constant exists".
 //
 // Recognised expressions (see "Skipping rows" in README.md):
 //
@@ -16,12 +16,12 @@
 //   list:a,b,c   skip exactly these m
 //   none         skip nothing
 //
-// Several expressions can be given. A row is skipped if any of them says so,
-// so two mod: rules keep only the m satisfying both.
+// A row is skipped if any expression says so, so two mod: rules keep only the
+// m satisfying both.
 class SkipRule {
 public:
-  // Parses one expression, using ring_order for the bare "powers" form.
-  // Returns false and sets error if the expression is malformed.
+  // Parses one expression, using ring_order for the bare "powers" form. False,
+  // with `error` set, if it is malformed.
   bool add(const std::string &spec, int ring_order, std::string &error) {
     if (spec == "none")
       return true;

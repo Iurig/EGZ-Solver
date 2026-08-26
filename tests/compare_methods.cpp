@@ -3,16 +3,14 @@
 //
 //   compare_methods <ring> <m-min> <m-max> <t-max> [per-cell-ms]
 //
-// The two are independent down to their own e_m and their own memo, so an
-// agreement is evidence and a disagreement localises a bug to one of them.
-// TopDownEGZSolver searches downward for a counterexample at each candidate length;
-// BottomUpEGZSolver sweeps every multiset level by level. See the comment at
-// the top of egz_bottom_up.hpp.
+// The two are independent down to their own e_m and memo, so an agreement is
+// evidence and a disagreement localises a bug to one of them. TopDownEGZSolver
+// hunts a counterexample at each candidate length; BottomUpEGZSolver sweeps
+// every multiset level by level. See the top of egz_bottom_up.hpp.
 //
-// The optional budget is in milliseconds and applies to each method separately:
-// a cell where one side exceeds it stops that side for the rest of the row,
-// since cost grows steeply with t. Cells only one side finished are reported as
-// such and not counted as agreements.
+// The optional budget is milliseconds per method: a cell where one side exceeds
+// it stops that side for the rest of the row, since cost grows steeply with t.
+// Cells only one side finished are reported as such, not as agreements.
 #include <chrono>
 #include <iostream>
 #include <string>
@@ -33,8 +31,8 @@ struct Totals {
 };
 
 // A cell either method gave up on says nothing about the other, so it must not
-// be counted as a disagreement -- which is exactly what a bare == would do,
-// since EGZ_ABANDONED is just another int.
+// count as a disagreement -- which is what a bare == would do, EGZ_ABANDONED
+// being just another int.
 static std::string cellText(int v) {
   return v == EGZ_ABANDONED ? std::string("?") : std::to_string(v);
 }
@@ -74,8 +72,8 @@ static int compare(int m_min, int m_max, int t_max, double budget_ms) {
         verdict = "ONE-SIDED";
         tot.oneSided++;
       } else if (a == EGZ_ABANDONED || b == EGZ_ABANDONED) {
-        // Which side hit its ceiling is the interesting part: this is where the
-        // two methods stop being interchangeable.
+        // Which side hit its ceiling is the point: this is where the two stop
+        // being interchangeable.
         verdict = (a == EGZ_ABANDONED) ? "ABANDONED-top" : "ABANDONED-bottom";
         tot.abandoned++;
       } else if (a == b) {
@@ -97,13 +95,11 @@ static int compare(int m_min, int m_max, int t_max, double budget_ms) {
             << tot.abandoned << " abandoned by one method" << std::endl;
   std::cout << "time    top-down " << (long)tot.topMs << " ms, bottom-up " << (long)tot.bottomMs << " ms" << std::endl;
 
-  // Memory, in the terms each method actually spends it. Both accumulate a
-  // memo of e_m results; only bottom-up also holds levels of multisets, and
-  // that is the term with a ceiling on it.
-  //
-  // A memo entry is a sequence -- a vector of R::order ints -- plus a value, in
-  // a hash table node, so the estimate below is deliberately coarse and stated
-  // as such. Level memory is exact: two levels live, one bit per multiset.
+  // Memory in the terms each method spends it. Both accumulate a memo of e_m
+  // results; only bottom-up also holds levels, and that is the term with a
+  // ceiling. A memo entry is a sequence plus a value in a hash node, so the
+  // estimate is coarse and says so. Level memory is exact: two levels live at
+  // one bit per multiset.
   const size_t entryBytes = sizeof(int) * R::order + 64;
   const size_t topMemo = top.memoEntries(), bottomMemo = bottom.memoEntries();
   const unsigned long long peak = bottom.peakLevel();
@@ -112,9 +108,8 @@ static int compare(int m_min, int m_max, int t_max, double budget_ms) {
   std::cout << "levels  top-down none, bottom-up peak " << peak << " multisets (" << (peak / 4 >> 10) << " KiB for the "
             << "two live levels)" << std::endl;
 
-  // Which half of the bottom-up search the time goes to. Level t evaluates e_m
-  // on every multiset of that size; every level above it is pure set
-  // arithmetic over the level below.
+  // Which half of the bottom-up search the time goes to: level t evaluates e_m
+  // on every multiset of that size, and every level above is set arithmetic.
   const double em = bottom.emMs(), climb = bottom.climbMs();
   const double total = em + climb;
   std::cout << "split   bottom-up e_m at level t " << (long)em << " ms over " << bottom.emCells() << " multisets ("
@@ -122,8 +117,8 @@ static int compare(int m_min, int m_max, int t_max, double budget_ms) {
             << bottom.climbCells() << " multisets (" << (total > 0 ? (long)(100 * climb / total) : 0) << "%)"
             << std::endl;
   if (tot.agree == 0) {
-    // Otherwise a budget so tight that nothing finished on both sides would
-    // report success without having compared anything.
+    // Otherwise a budget too tight for anything to finish on both sides would
+    // report success without comparing anything.
     std::cerr << "no cell was computed by both methods; nothing was compared" << std::endl;
     return 1;
   }
@@ -139,8 +134,7 @@ int main(int argc, char **argv) {
   int m_min = std::stoi(argv[2]), m_max = std::stoi(argv[3]), t_max = std::stoi(argv[4]);
   double budget = argc > 5 ? std::stod(argv[5]) : 0;
 
-  // Both solvers size storage from these at construction, so they have to be
-  // set before either is built.
+  // Both solvers size storage from these at construction, so set them first.
   setSearchBounds(m_max, t_max);
 
   int rc = 2;

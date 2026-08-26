@@ -3,20 +3,19 @@
 
     python tests/expand_tables.py --solver build/egz-solver --add-rows 4 --add-cols 4
 
-Each table is recomputed with wider bounds and merged back. The merge is the
-point of the script, and it has one rule that matters:
+Each table is recomputed with wider bounds and merged back. The merge has one
+rule that matters:
 
     a value already published is never overwritten.
 
-A new run can only fill a cell that was empty of a value, never change one. If
-it does disagree with a published cell, that is a regression, and the script
-stops and says so rather than quietly rewriting data other people may have
-cited. So a run of this is also a full replay of everything already committed --
-the widest regression check in the repository, at the cost of recomputing it.
+A new run can fill a cell that had no value, never change one. A recomputed cell
+that disagrees with a published one is a regression: the script stops and says
+so rather than quietly rewriting data others may have cited. So a run is also a
+full replay of everything committed -- the widest regression check here, at the
+cost of recomputing it.
 
-Cells the run gives up on (`--max-work`, or an internal ceiling) come back as
-`?`. Where the published table already had a value, that value stays; where it
-did not, the `?` stands and says the cell is still open.
+Cells the run gives up on come back as `?`. A published value stays; where there
+was none, the `?` stands and says the cell is still open.
 
 Options:
   --solver PATH     egz-solver binary (required)
@@ -44,9 +43,8 @@ ABANDONED = "?"
 
 
 def read_table(path):
-    """Returns (header_t_values, {m: {t: text}}) with text '' for blank, or
-    (None, None) when there is not even a header yet -- which is what a run
-    killed early can leave behind, its output stream still buffered."""
+    """(header_t_values, {m: {t: text}}), text '' for blank; (None, None) when
+    there is not even a header -- what a run killed early can leave behind."""
     raw = io.open(path, "rb").read().decode("utf-8")
     lines = raw.splitlines()
     if not lines or not lines[0].startswith("\t"):
@@ -87,9 +85,8 @@ def merge(old_rows, new_rows, ts, name, problems):
             has_o = o is not None and o != ABANDONED
             has_n = n is not None and n != ABANDONED
             if has_o and has_n and o != n:
-                # A published value and a fresh one that disagree. Never merge
-                # over this: one of them is wrong and it is not for a script to
-                # decide which.
+                # A published value and a fresh one disagree. One is wrong, and
+                # it is not for a script to decide which.
                 problems.append("%s m=%d t=%d: published %r, recomputed %r" % (name, m, t, o or "blank", n or "blank"))
             if has_o:
                 row[t] = o
@@ -160,11 +157,10 @@ def main():
                     failures += 1
                     continue
             except subprocess.TimeoutExpired:
-                # The solver writes rows as it finishes them, so a timeout still
-                # leaves whatever it got through on disk. Salvaging that is what
-                # makes a long run worth starting at all -- but the row it was
-                # in the middle of is dropped, since a half-written row would
-                # merge in as a row of blanks and blanks are answers.
+                # The solver flushes each row, so a timeout still leaves what it
+                # finished on disk -- which is what makes a long run worth
+                # starting. The row in progress is dropped: half a row would
+                # merge in as blanks, and blanks are answers.
                 partial = True
             elapsed = time.time() - started
             if not os.path.exists(produced):

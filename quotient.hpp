@@ -12,31 +12,28 @@
 //
 //   Z_2[x]/(x^2+x+1)        Z_4[x]/(x^2+1)        Z_2[x,y]/(x^2,y^2)
 //
-// Every other ring here is a type, fixed when the binary is compiled. This one
-// is chosen from a string, so its order, characteristic and operation tables
-// are ordinary statics rather than `constexpr`. Nothing downstream minds:
-// sequence and TopDownEGZSolver read R::order as a value, never in a constant
-// expression.
-//
-// One ring is configured at a time, by configureQuotient(). That matches how
-// the program is used -- one table per run -- and keeps an element a bare int,
-// which matters because elements are copied constantly in the inner loop.
+// Every other ring here is a type fixed at compile time. This one comes from a
+// string, so its order, characteristic and tables are plain statics rather than
+// `constexpr`; the solver only ever reads them as values. One ring is
+// configured at a time, by configureQuotient(), which matches one table per run
+// and keeps an element a bare int -- they are copied constantly in the inner
+// loop.
 //
 // == Structure ==
 //
-// The ring is described by a *basis of monomials* and the expansion of each
-// pairwise product of basis monomials back into that basis. Multiplication of
-// two arbitrary elements then follows by bilinearity and never has to know what
-// a monomial is; buildTables() below is written entirely against that.
+// The ring is a *basis of monomials* plus the expansion of each pairwise
+// product of basis monomials back into it. Multiplication of arbitrary elements
+// follows by bilinearity, never knowing what a monomial is, and buildTables()
+// is written entirely against that.
 //
 // With one monic relation f_i(x_i) of degree d_i per variable, the basis is the
 // box of exponent vectors 0 <= e_i < d_i, and the expansion factorises: each
-// x_i^(g_i) reduces on its own, and the product of monomials is the product of
-// those univariate expansions. That is what buildBasis() does.
+// x_i^(g_i) reduces on its own, so a product of monomials is the product of
+// those univariate expansions. That is buildBasis().
 //
-// What this deliberately does not cover is a relation mixing variables, such as
-// (xy - 1) or (x^2 - y). Those need a Grobner basis over Z_n -- and over
-// composite n, the ring version rather than the textbook field one.
+// Not covered: a relation mixing variables, such as (xy - 1) or (x^2 - y).
+// Those need a Grobner basis over Z_n -- and over composite n, the ring version
+// rather than the textbook field one.
 struct QuotientDef {
   int n = 0;   // coefficients live in Z_n
   int dim = 0; // number of basis monomials: the product of the degrees
@@ -49,23 +46,21 @@ struct QuotientDef {
   std::vector<int> addTable, mulTable;        // order*order, flattened
 };
 
-// The largest ring this will build. The tables are order^2 entries, and
-// sequence allocates a vector of `order` ints per sequence, so the search is
-// hopeless long before this -- the cap is here to turn a typo like
-// Z_2[x]/(x^40) into a message instead of an allocation failure.
+// The largest ring this will build. Tables are order^2 entries and each
+// sequence holds `order` ints, so the search is hopeless long before this; the
+// cap turns a typo like Z_2[x]/(x^40) into a message, not a failed allocation.
 inline constexpr int QUOTIENT_MAX_ORDER = 256;
 
 inline int modn(long long v, int n) { return (int)(((v % n) + n) % n); }
 
 // --- parsing -----------------------------------------------------------------
 
-// Parses one relation: "x2+x+1", "x^2+x+1", "2y^3-1", "x". Coefficients are
-// reduced mod n. Both "x^k" and "xk" are accepted for the exponent; the second
-// is the form a ring's name uses, so a name parses back to the same ring.
+// Parses one relation: "x2+x+1", "x^2+x+1", "2y^3-1", "x", with coefficients
+// reduced mod n. Both "x^k" and "xk" are accepted, the second being the form a
+// ring's name uses, so a name parses back to the same ring.
 //
 // `var` is set to the variable seen. A relation in two variables is rejected
-// here rather than silently mishandled: the basis below assumes each relation
-// constrains one variable.
+// rather than mishandled: the basis below assumes one variable per relation.
 inline bool parseRelation(const std::string &s, int n, std::vector<int> &out, char &var, std::string &err) {
   out.assign(1, 0);
   var = 0;
@@ -160,8 +155,8 @@ inline std::string renderPoly(const std::vector<int> &poly, char var) {
   return s.empty() ? "0" : s;
 }
 
-// The exponent vector of basis monomial `idx`, variable 0 varying fastest. For
-// one variable this is the identity, which is what keeps a univariate quotient
+// Exponent vector of basis monomial `idx`, variable 0 varying fastest. For one
+// variable it is the identity, which keeps a univariate quotient
 // byte-identical to the hand-written ring it generalises.
 inline void monomialExponents(const QuotientDef &d, int idx, std::vector<int> &e) {
   e.resize(d.degs.size());
@@ -179,15 +174,14 @@ inline int monomialIndex(const QuotientDef &d, const std::vector<int> &e) {
 }
 
 // The basis, and the expansion of every product of two basis monomials into it.
-//
 // Reduction rests on each relation being monic: x^d = -(f_0 + ... + f_(d-1)
-// x^(d-1)) is a rewrite rule only when the leading coefficient is a unit.
+// x^(d-1)) is a rewrite rule only when the leading coefficient is a unit, and
 // parseSpec has already divided through by it.
 inline void buildBasis(QuotientDef &d) {
   const int n = d.n, k = (int)d.degs.size();
 
-  // powers[i][g] is x_i^g written in {1, x_i, ..., x_i^(d_i - 1)}, for every g
-  // a product of two basis monomials can reach.
+  // powers[i][g] is x_i^g in {1, x_i, ..., x_i^(d_i - 1)}, for every g a
+  // product of two basis monomials can reach.
   std::vector<std::vector<std::vector<int>>> powers(k);
   for (int i = 0; i < k; i++) {
     const int di = d.degs[i];
@@ -205,9 +199,9 @@ inline void buildBasis(QuotientDef &d) {
     }
   }
 
-  // The product of monomials e and f is prod_i x_i^(e_i + f_i), and each factor
-  // expands on its own, so the coefficient of basis monomial c in the product is
-  // the product over i of the univariate coefficients.
+  // Monomials e and f multiply to prod_i x_i^(e_i + f_i), and each factor
+  // expands on its own, so the coefficient of basis monomial c is the product
+  // over i of the univariate coefficients.
   d.basisProduct.assign((size_t)d.dim * d.dim, std::vector<int>(d.dim, 0));
   std::vector<int> e(k), f(k), c(k);
   for (int a = 0; a < d.dim; a++) {
@@ -359,8 +353,8 @@ inline bool parseSpec(const std::string &spec, QuotientDef &d, std::string &err)
     return false;
   }
 
-  // One relation per variable, each in that variable alone. Anything else is a
-  // ring this cannot represent, not a ring it gets wrong.
+  // One relation per variable, each in that variable alone. Anything else is
+  // a ring this cannot represent, not one it gets wrong.
   std::vector<std::string> parts = splitRelations(body, sep);
   if (parts.size() != vars.size()) {
     err = std::to_string(vars.size()) + " variable(s) but " + std::to_string(parts.size()) +
@@ -401,9 +395,9 @@ inline bool parseSpec(const std::string &spec, QuotientDef &d, std::string &err)
       err = std::string("the relation in ") + vars[v] + " must have degree at least 1";
       return false;
     }
-    // A leading coefficient that is a unit mod n can be divided out, which is
-    // what makes reduction a rewrite rule. A zero divisor cannot: x^deg would
-    // have no unique normal form, and the quotient is not free over Z_n.
+    // A unit leading coefficient can be divided out, which is what makes
+    // reduction a rewrite rule. A zero divisor cannot: x^deg would have no
+    // unique normal form, and the quotient is not free over Z_n.
     if (poly[deg] != 1) {
       int inv = 0;
       for (int k = 1; k < n; k++)
@@ -459,9 +453,8 @@ inline QuotientDef quotientDef;
 
 class Quotient : public ring {
 public:
-  // Deliberately not constexpr: this ring is not known until run time. Every
-  // use of R::order, R::characteristic and R::unit in the solver is a plain
-  // value read, so nothing needs them earlier.
+  // Not constexpr: this ring is not known until run time. The solver reads
+  // R::order, R::characteristic and R::unit as plain values, never earlier.
   static inline int order = 0, characteristic = 0, unit = 1;
 
   Quotient(int value = 0) : ring(value) {}
@@ -477,8 +470,8 @@ public:
   static std::string name() { return quotientDef.name; }
 };
 
-// Selects the ring `spec` names. Returns false and sets `error` if the spec is
-// not a well formed quotient.
+// Selects the ring `spec` names. False, with `error` set, if the spec is not a
+// well formed quotient.
 inline bool configureQuotient(const std::string &spec, std::string &error) {
   QuotientDef d;
   if (!parseSpec(spec, d, error))
@@ -486,14 +479,14 @@ inline bool configureQuotient(const std::string &spec, std::string &error) {
   quotientDef = std::move(d);
   Quotient::order = quotientDef.order;
   Quotient::characteristic = quotientDef.n;
-  // Every relation is monic of degree >= 1, so the ideal contains no nonzero
+  // Every relation is monic of degree >= 1, so the ideal holds no nonzero
   // constant and k*1 = 0 exactly when n divides k: the characteristic is n.
   Quotient::unit = 1;
   return true;
 }
 
-// True if `spec` is shaped like a quotient at all, so a parse failure can be
-// reported as a broken spec rather than an unknown ring name.
+// True if `spec` is shaped like a quotient at all, so a parse failure reads as
+// a broken spec rather than an unknown ring name.
 inline bool looksLikeQuotient(const std::string &spec) {
   return spec.compare(0, 2, "Z_") == 0 && (spec.find("]/") != std::string::npos || spec.find("_by_") != std::string::npos);
 }

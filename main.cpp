@@ -19,8 +19,8 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
   string output_file_name = "EGZ_" + R::name() + ".tsv";
   ConditionalFileStream output_file(output_file_name, to_file, out_dir);
 
-  // Either TopDownEGZSolver<R> or BottomUpEGZSolver<R>; see --method. They are
-  // independent implementations that agree, not one wrapping the other.
+  // TopDownEGZSolver<R> or BottomUpEGZSolver<R>; see --method. Independent
+  // implementations that agree, not one wrapping the other.
   Solver s;
 
   for (int i = 1; i < T_MAX(m_max); i++)
@@ -29,31 +29,30 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
   vector<int> skipped;
   long long abandoned = 0;
   for (int m = m_min; m < m_max; m++) {
-    // Skipped rows are omitted, not blanked: an absent row says "not computed",
-    // which a blank row could not distinguish from "no EGZ constant exists".
+    // Omitted rather than blanked: an absent row says "not computed", which a
+    // blank row could not distinguish from "no EGZ constant exists".
     if (skip.skips(m)) {
       skipped.push_back(m);
       continue;
     }
-    // Every row is preceded by its newline, so omitting one leaves no gap and
+    // Each row is preceded by its newline, so omitting one leaves no gap and
     // the file still ends without a trailing newline.
     output_file << "\n";
     output_file << m;
-    // One tab per cell, written before it, so the row ends without a trailing
-    // tab and every row is exactly T_MAX(m_max) - 1 cells wide.
+    // One tab before each cell, so a row ends without a trailing tab and is
+    // exactly T_MAX(m_max) - 1 cells wide.
     for (int t = 1; t < T_MAX(m_max); t++) {
       output_file << "\t";
-      // Outside this row's range of t, so nothing was computed here. Blank is
-      // reserved for the one case where a blank is an answer, below.
+      // Outside this row's range of t, so nothing was computed. Blank is
+      // reserved for the one case where it is an answer, below.
       if (t < T_MIN(m) || t >= T_MAX(m)) {
         output_file << "?";
         continue;
       }
       int e = s.EGZ(t, m);
       if (e == EGZ_ABANDONED) {
-        // Must be caught before the blank test below: e - t would be negative
-        // there, and the cell would be written blank as though no constant
-        // existed. "?" says the budget ran out instead.
+        // Must come before the blank test below, where e - t is negative and
+        // would be written blank as though no constant existed.
         abandoned++;
         output_file << "?";
         continue;
@@ -67,16 +66,15 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
       }
       output_file << e - t;
     }
-    // A row can take minutes, and a whole table hours. Flushing here means an
-    // interrupted run leaves every row it finished, rather than however much
-    // happened to be past the buffer.
+    // A row takes minutes and a table hours, so flush: an interrupted run then
+    // keeps every row it finished, not whatever was past the buffer.
     output_file.flush();
   }
 
   if (abandoned > 0) {
-    // The budget is not the only thing that can abandon a cell: the bottom-up
-    // search also gives up on a level too large to hold. Saying "--max-work 0"
-    // when no budget was set sends the reader after the wrong knob.
+    // The budget is not the only thing that abandons a cell -- the bottom-up
+    // search also gives up on a level too large to hold -- so naming
+    // --max-work when none was set would send the reader after the wrong knob.
     cerr << "abandoned " << abandoned << " cell" << (abandoned == 1 ? "" : "s");
     if (workBudget() > 0)
       cerr << " at --max-work " << workBudget();
@@ -233,8 +231,8 @@ int main(int argc, char **argv) {
     return 2;
   }
 
-  // Must happen before any TopDownEGZSolver is built: solvers size their memo tables
-  // from M_MAX() at construction.
+  // Must happen before any solver is built: they size their memo tables from
+  // M_MAX() at construction.
   setSearchBounds(m_max, t_max);
   setVerbose(!quiet);
   setWorkBudget(max_work);
@@ -261,8 +259,8 @@ int main(int argc, char **argv) {
       },
       &ring_error);
   if (!known) {
-    // A quotient spec that failed to parse gets its own message; anything else
-    // is just a name nothing answers to.
+    // A failed quotient spec gets its own message; anything else is just a
+    // name nothing answers to.
     if (!ring_error.empty())
       cerr << "--ring " << ring << ": " << ring_error << endl;
     else

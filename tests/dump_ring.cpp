@@ -5,11 +5,11 @@
 //   dump_ring <ring-name>     dump that ring
 //   dump_ring --all           dump every ring, in registry order
 //
-// This is what makes "is the new implementation the same ring?" a checkable
-// question. tests/ring_goldens.tsv holds a dump of each ring as it stands, and
-// tests/test_rings.py compares against it -- so a ring reimplemented behind the
-// same name has to reproduce its tables exactly, and a ring that is supposed to
-// recover an existing one has to reproduce that one's tables.
+// This makes "is the new implementation the same ring?" checkable.
+// tests/ring_goldens.tsv holds a dump of each ring as it stands and
+// tests/test_rings.py compares against it, so a ring reimplemented behind the
+// same name -- or one meant to recover an existing ring -- must reproduce its
+// tables exactly.
 #include <iostream>
 #include <string>
 
@@ -21,9 +21,8 @@ static void dump() {
   std::cout << "order\t" << R::order << "\n";
   std::cout << "characteristic\t" << R::characteristic << "\n";
   std::cout << "unit\t" << R::unit << "\n";
-  // Elements are their own indices: every ring here is constructed from an int
-  // in [0, order) and exposes that int as `value`. See sequence.hpp, which
-  // indexes storage by it.
+  // Elements are their own indices: every ring is constructed from an int in
+  // [0, order) and exposes it as `value`. sequence.hpp indexes storage by it.
   for (int i = 0; i < R::order; i++) {
     std::cout << "add\t" << i;
     for (int j = 0; j < R::order; j++) {

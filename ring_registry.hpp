@@ -15,8 +15,8 @@ struct ring_tag {
 template <typename... Rs>
 struct ring_list {};
 
-// Every ring the executable can be pointed at, keyed by R::name().
-// To expose a new ring, implement it in rings.hpp and add it to this list.
+// Every ring the executable can be pointed at, keyed by R::name(). To add one,
+// implement it in rings.hpp and put it in this list.
 using AllRings = ring_list<Zn<2>, Zn<3>, Zn<4>, Zn<5>, Zn<6>, Zn<7>, Zn<8>, Zn<9>, Zn<10>, Zn<11>, Zn<12>, Znp<2, 2>, Znp<2, 3>,
                            Znp<3, 2>, F4, Z_2_over, product<Zn<2>, Zn<2>>, product<Zn<2>, Zn<3>>>;
 
@@ -28,16 +28,14 @@ bool dispatchRingImpl(const std::string &name, Visitor &visitor, ring_list<Rs...
   return found;
 }
 
-// Calls visitor with a ring_tag<R> for the ring `name` denotes: one of the
-// compiled-in rings above, or a quotient spec such as Z_2[x]/(x^2+x+1), which
-// is built at run time and visited as ring_tag<Quotient>.
-//
-// Returns false if the name is neither. When it is a malformed quotient spec
-// rather than an unknown name, `error` is set to say what is wrong with it.
+// Calls visitor with a ring_tag<R> for the ring `name` denotes: one compiled in
+// above, or a quotient spec such as Z_2[x]/(x^2+x+1), built at run time and
+// visited as ring_tag<Quotient>. False if it is neither -- with `error` set
+// when it is a malformed spec rather than an unknown name.
 template <typename Visitor>
 bool dispatchRing(const std::string &name, Visitor &&visitor, std::string *error = nullptr) {
   // Compiled-in rings win: Z_2x_by_x2 is both a registered name and a valid
-  // spec, and the registered ring is the one the published table was made with.
+  // spec, and the registered one made the published table.
   if (dispatchRingImpl(name, visitor, AllRings{}))
     return true;
   std::string why;

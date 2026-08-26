@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Verify the published tables in Experimental tables/ against the thesis results.
 
-Every check here restates a result from the thesis and applies it to the
-committed data. The theorem statements are inlined, so this script needs only
-the .tsv files -- no PDF, no build, no third-party packages.
+Each check restates a thesis result and applies it to the committed data. The
+theorem statements are inlined, so this needs only the .tsv files -- no PDF, no
+build, no third-party packages.
 
     python tests/verify_against_thesis.py                  # table checks only
     python tests/verify_against_thesis.py --solver build/egz-solver
@@ -22,18 +22,16 @@ from math import comb
 
 # --- ring metadata -----------------------------------------------------------
 # order = number of elements, char = characteristic. `t_limit` is the exclusive
-# upper bound on t the table was generated with, as a function of m: cells past
-# a row's limit were never computed and so must carry "?", not a blank.
+# upper bound on t a table was generated with, as a function of m: cells past a
+# row's limit were never computed and must carry "?", not a blank.
 #
-# Every table currently uses the flat bound -- the full header width -- so no
-# table needs the variable form today. It stays because a table generated with a
-# per-row bound is a thing that has happened here: EGZ_Z_2x_by_x2.tsv used
-# smallestPowerBiggerThan(2, m) + m + 1, the form that survives commented out in
-# config.hpp, until it was recomputed across its full width.
+# Every table now uses the flat bound, the full header width. The variable form
+# stays because it has been needed here before: EGZ_Z_2x_by_x2.tsv used
+# smallestPowerBiggerThan(2, m) + m + 1 until it was recomputed full width.
 FLAT = None
 
-# Marks a cell holding no value: never computed for that row, or abandoned under
-# --max-work. Distinct from blank, which means "no EGZ constant exists".
+# A cell holding no value: never computed, or abandoned under --max-work.
+# Distinct from blank, which means "no EGZ constant exists".
 ABANDONED = "?"
 
 RINGS = {
@@ -132,10 +130,10 @@ def check_shape(tables, rep):
 
 
 def check_blank_rule(tables, rep):
-    """A blank cell means one thing only: it was computed and no EGZ constant
-    exists, which for these rings is exactly when char(R) does not divide
-    C(t, m). Every cell outside a row's computed range -- left of the diagonal,
-    or past its t_limit -- must carry "?" instead."""
+    """A blank means one thing only: computed, and no EGZ constant exists --
+    for these rings, exactly when char(R) does not divide C(t, m). Everything
+    outside a row's computed range, left of the diagonal or past its t_limit,
+    must carry "?" instead."""
     checked = bad = 0
     detail = []
     for name, path in tables:
