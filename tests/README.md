@@ -55,6 +55,17 @@ Feed the `MATCH` lines back into `regression_cases.tsv` to extend the suite.
 Running it over all nine tables checks 5,395 cells, all of which agree with the
 solver.
 
+## Skip rules
+
+`test_skip.py` drives the `--skip` expressions through the CLI: which rows reach
+the table, that skipped rows are omitted rather than blanked, that the file stays
+well formed, and that malformed expressions are rejected. It runs under `ctest`
+as `skip_rules`.
+
+```sh
+python tests/test_skip.py build/egz-solver
+```
+
 ## Verifying against the published theorems
 
 `verify_against_thesis.py` checks the committed tables against the results

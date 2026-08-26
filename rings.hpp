@@ -4,24 +4,19 @@
 #include <numeric>
 #include <string>
 
-
 // Check this class for prerequisites of children classes
 class ring {
 public:
   int value;
 
-  // Don't forget declaring a static constexpr int characteristic and order,
-  // as well as name
+  // Don't forget declaring a static constexpr int characteristic, order and
+  // unit, as well as name
 
   // Constructor
   ring(int value = 0) : value(value) {}
 
   // Virtual destructor to support polymorphic deletion
   virtual ~ring() = default;
-
-  // Condition for skipping EGZ calculations (useful if certain m values are
-  // slow)
-  static bool skip(int m) { return false; };
 
   // Operator +
   ring operator+(const ring &other);
@@ -49,14 +44,6 @@ public:
 
   // Constructor
   Zn(int value = 0) : ring(value % n) {}
-
-  static bool skip(int m) {
-    while (m % order == 0) {
-      m /= order;
-    }
-    return false; // printing everybody, delete if you want to skip prime powers
-    return m == 1;
-  }
 
   // Operator +
   Zn operator+(const Zn &other) const { return Zn(value + other.value); }
@@ -109,8 +96,6 @@ public:
     value -= index;
   }
 
-  static bool skip(int m) { return false; };
-
   // Operator +
   Znp operator+(const Znp &other) {
     Znp sum;
@@ -162,14 +147,6 @@ public:
        {0, 2, 0, 2},               // x      0   x   0   x
        {0, 3, 2, 1}};              // x+1    0   x+1 x   1
   // clang-format on
-
-  static bool skip(int m) {
-    return false; // printing everybody, delete if you want to skip prime powers
-    if (m % 4 != 1) {
-      return true;
-    }
-    return false;
-  }
 
   // Constructor
   Z_2_over(int value = 0) : ring(value) {}

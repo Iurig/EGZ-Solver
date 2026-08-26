@@ -41,6 +41,7 @@ same either way.
 | `--m-max N` | Exclusive upper bound on `m`. |
 | `--t-max N` | Exclusive upper bound on `t`. |
 | `--out-dir DIR` | Where to write the table (default `Experimental tables`). |
+| `--skip EXPR` | Leave rows out of the table; repeatable. See [Skipping rows](#skipping-rows). |
 | `--no-file` | Print progress only; write nothing. |
 | `--quiet` | Suppress per-value progress output. |
 | `--list-rings` | List supported ring names and exit. |
@@ -50,6 +51,35 @@ missing, so run from the repository root to land in `Experimental tables/`.
 
 Be aware that cost grows steeply in both `m` and `t`: full tables for the larger
 rings take hours, and a single cell deep in a table can take minutes.
+
+## Skipping rows
+
+Some rows cost far more time and memory than their neighbours, and `--skip`
+leaves them out without recompiling. It takes an expression on `m`:
+
+| Expression | Skips |
+| --- | --- |
+| `powers` | `m` that are powers of the ring's order |
+| `pow:K` | `m` that are powers of `K` (counting `K^0 = 1`) |
+| `mod:K=R` | everything except `m` congruent to `R` modulo `K` |
+| `list:a,b,c` | exactly those `m` |
+| `none` | nothing |
+
+`--skip` may be given several times; a row is skipped if any expression says so,
+so two `mod:` rules keep only the `m` satisfying both.
+
+```sh
+./build/egz-solver --ring Z_3 --skip powers      # omit m = 1, 3, 9, ...
+./build/egz-solver --ring Z_2x_by_x2 --skip mod:4=1   # keep only m = 1 (mod 4)
+```
+
+Skipped rows are **omitted** from the table, not written blank, so their absence
+cannot be mistaken for "no EGZ constant exists". The `m` that were skipped are
+reported on stderr.
+
+For $ℤ_n$, `--skip powers` leaves out exactly the `m = n^k` rows, which are both
+the most expensive and the ones already settled in closed form (see
+[tests/README.md](tests/README.md)), so little is lost by skipping them.
 
 ## Output format
 One `.tsv` per ring, named `EGZ_<ring>.tsv`. **Rows are `m`, columns are `t`, and
@@ -63,6 +93,9 @@ A cell is blank in any of these cases, which the format does not distinguish:
  - `t >= T_MAX(m)` — beyond the requested bound.
  - `EGZ(t, m) - t <= -1`, including `EGZ(t, m) == 0`, which is the solver's way
    of reporting that no EGZ constant exists for that `(t, m)`.
+
+A row left out by `--skip` is absent from the file rather than written blank, so
+"not computed" stays distinguishable from the cases above.
 
 For $ℤ_n$ a cell is non-blank exactly when $\binom{t}{m} \equiv 0 \pmod n$, which
 is a useful sanity check on a generated table.
@@ -115,6 +148,7 @@ See [tests/README.md](tests/README.md).
 | `ring_registry.hpp` | Maps a `--ring` name to its type. |
 | `sequence.hpp` | Multiset of ring elements, with hashing for memoization. |
 | `config.hpp` | Search bounds (`M_MAX`, `T_MIN`, `T_MAX`). |
+| `skip_rule.hpp` | Parses and applies the `--skip` expressions. |
 | `conditional_file_stream.hpp` | Output stream that can be switched off. |
 
 Everything but `main.cpp` is a header, so the project builds as one translation
@@ -128,7 +162,7 @@ unit. Each header is self-contained and guarded with `#pragma once`.
    agree with that indexing.
 2. Add the type to `AllRings` in `ring_registry.hpp`. It is then selectable by
    its `name()` via `--ring`.
-3. Optionally override `static bool skip(int m)` to leave rows out of the table.
+Rows are left out with `--skip` at run time, so a ring needs no hook for that.
 
 ## License
 

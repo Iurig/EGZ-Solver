@@ -53,6 +53,11 @@ if(Python3_Interpreter_FOUND)
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/verify_against_thesis.py
                    --tables "${CMAKE_CURRENT_SOURCE_DIR}/Experimental tables"
                    --solver $<TARGET_FILE:egz-solver>)
+
+  # Drives the --skip expressions through the CLI.
+  add_test(NAME skip_rules
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_skip.py
+                   $<TARGET_FILE:egz-solver>)
 else()
   message(STATUS "Python3 not found; skipping the thesis_verification test")
 endif()

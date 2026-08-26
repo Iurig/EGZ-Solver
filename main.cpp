@@ -1,18 +1,20 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #include "conditional_file_stream.hpp"
 #include "config.hpp"
 #include "egz_solver.hpp"
 #include "ring_registry.hpp"
+#include "skip_rule.hpp"
 
 using namespace std;
 
 // Writes one table for ring R: rows are m, columns are t, and each cell holds
 // EGZ(t, m) - t. See "Output format" in README.md.
 template <typename R>
-void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool quiet) {
+void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool quiet, const SkipRule &skip) {
   string output_file_name = "EGZ_" + R::name() + ".tsv";
   ConditionalFileStream output_file(output_file_name, to_file, out_dir);
 
@@ -20,15 +22,19 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
 
   for (int i = 1; i < T_MAX(m_max); i++)
     output_file << "\t" << i;
-  output_file << "\n";
+
+  vector<int> skipped;
   for (int m = m_min; m < m_max; m++) {
-    output_file << m;
-    if (R::skip(m)) {
-      for (int j = 0; j < T_MAX(m_max) - 1; j++)
-        output_file << "\t";
-      output_file << "\n";
+    // Skipped rows are omitted, not blanked: an absent row says "not computed",
+    // which a blank row could not distinguish from "no EGZ constant exists".
+    if (skip.skips(m)) {
+      skipped.push_back(m);
       continue;
     }
+    // Every row is preceded by its newline, so omitting one leaves no gap and
+    // the file still ends without a trailing newline.
+    output_file << "\n";
+    output_file << m;
     for (int i = 0; i < m; i++)
       output_file << "\t";
     for (int t = T_MIN(m); t < T_MAX(m_max); t++) {
@@ -49,8 +55,13 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
       if (t < T_MAX(m_max) - 1)
         output_file << "\t";
     }
-    if (m != m_max - 1)
-      output_file << "\n";
+  }
+
+  if (!skipped.empty()) {
+    cerr << "skipped " << skipped.size() << " row" << (skipped.size() == 1 ? "" : "s") << ", m =";
+    for (int m : skipped)
+      cerr << " " << m;
+    cerr << endl;
   }
 }
 
@@ -62,6 +73,12 @@ static void usage() {
        << "  --m-max N       exclusive upper bound on m (default: " << M_MAX() << ")\n"
        << "  --t-max N       exclusive upper bound on t (default: " << T_MAX() << ")\n"
        << "  --out-dir DIR   directory for the .tsv (default: " << DEFAULT_OUTPUT_DIR << ")\n"
+       << "  --skip EXPR     leave rows out of the table; may be repeated:\n"
+       << "                    powers      m that are powers of the ring's order\n"
+       << "                    pow:K       m that are powers of K\n"
+       << "                    mod:K=R     keep only m congruent to R modulo K\n"
+       << "                    list:a,b,c  exactly these m\n"
+       << "                  Skipped rows are omitted, not written blank.\n"
        << "  --no-file       print progress only, do not write a table\n"
        << "  --quiet         suppress per-value progress output\n"
        << "  --list-rings    list supported ring names and exit\n"
@@ -98,6 +115,7 @@ int main(int argc, char **argv) {
   int m_max = M_MAX();
   int t_max = T_MAX();
   bool to_file = true, quiet = false;
+  vector<string> skip_specs;
 
   for (int i = 1; i < argc; i++) {
     string arg = argv[i];
@@ -126,6 +144,12 @@ int main(int argc, char **argv) {
       m_max = intArg(i, argc, argv, arg);
     } else if (arg == "--t-max") {
       t_max = intArg(i, argc, argv, arg);
+    } else if (arg == "--skip") {
+      if (i + 1 >= argc) {
+        cerr << "--skip requires a value" << endl;
+        return 2;
+      }
+      skip_specs.push_back(argv[++i]);
     } else if (arg == "--no-file") {
       to_file = false;
     } else if (arg == "--quiet") {
@@ -151,13 +175,23 @@ int main(int argc, char **argv) {
   setSearchBounds(m_max, t_max);
   setVerbose(!quiet);
 
+  int bad_spec = 0;
   bool known = dispatchRing(ring, [&](auto tag) {
     using R = typename decltype(tag)::type;
-    findEGZs<R>(m_max, m_min, out_dir, to_file, quiet);
+    SkipRule skip;
+    for (const string &spec : skip_specs) {
+      string error;
+      if (!skip.add(spec, R::order, error)) {
+        cerr << "--skip " << spec << ": " << error << endl;
+        bad_spec = 2;
+        return;
+      }
+    }
+    findEGZs<R>(m_max, m_min, out_dir, to_file, quiet, skip);
   });
   if (!known) {
     cerr << "unknown ring: " << ring << " (try --list-rings)" << endl;
     return 2;
   }
-  return 0;
+  return bad_spec;
 }
