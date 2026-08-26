@@ -6,8 +6,8 @@ A C++ brute-force calculator for arbitrary degree Erdös-Ginzburg-Ziv constants 
  - $𝔽_4$.
  - $\frac{ℤ_2[x]}{x^2}$
  - Products of any two of the above, via `product<R, P>` (e.g. `Z_2xZ_2`).
- - $ℤ_n[x]/(P)$ for any $P$ of degree $\ge 1$, built at run time from a string
-   and needing no recompilation. See [Runtime rings](#runtime-rings).
+ - $ℤ_n[x]/(P)$ for any $P$ of degree $\ge 1$, named directly on the command
+   line. See [Runtime rings](#runtime-rings).
 
 `--list-rings` prints the instantiations the binary was built with; see
 [Adding a ring](#adding-a-ring) to expose more.
@@ -54,6 +54,33 @@ missing, so run from the repository root to land in `Experimental tables/`.
 
 Be aware that cost grows steeply in both `m` and `t`: full tables for the larger
 rings take hours, and a single cell deep in a table can take minutes.
+
+## Runtime rings
+
+Besides the rings listed above, `--ring` takes a quotient of a polynomial ring
+written out directly, so you can compute one without recompiling:
+
+```sh
+./build/egz-solver --ring 'Z_2[x]/(x^2+x+1)'
+./build/egz-solver --ring 'Z_4[x]/(x^2+1)'
+./build/egz-solver --ring Z_2x_by_x2+x+1      # the same ring, no quoting needed
+```
+
+`P` needs degree at least 1 and a leading coefficient invertible mod `n`; a zero
+divisor there leaves a ring the solver cannot compute in, and it says so rather
+than guessing. Coefficients may be written with `-`, and `x^2` and `x2` are both
+accepted.
+
+The ring has `n^deg(P)` elements, and that is the number to watch: cost climbs
+steeply with it, and anything past 256 elements is refused as unsearchable.
+
+The table lands in `EGZ_Z_nx_by_P.tsv`, and that name is itself a valid `--ring`
+argument, so a file name can always be fed back to reproduce its contents.
+
+`Z_2[x]/(x^2)` and `Z_2[x]/(x^2+x+1)` are the built-in `Z_2x_by_x2` and `F_4`
+written the other way round. They give identical results, down to byte-identical
+EGZ tables, which `tests/test_rings.py` checks; a name matching a built-in still
+selects the built-in, since the published tables were computed with it.
 
 ## Skipping rows
 
@@ -128,9 +155,8 @@ So a cell containing `6` at row `m = 1`, column `t = 21` means `EGZ(21, 1) = 27`
 A blank cell means the solver computed that `(t, m)` and got that `EGZ(t, m)` is
 infinite/no EGZ constant exists there. A blank is an answer. However, **a `?`
 means no value was computed**, for one of three reasons:
- - `t < T_MIN(m)`, i.e. `t < m` — left of the diagonal, outside the row's range
-   of `t`.
- - `t >= T_MAX(m)` — beyond the bound the row was generated with.
+ - `t < m` — left of the diagonal, outside the row's range of `t`.
+ - `t` past the upper bound the row was generated with.
  - the search was abandoned under `--max-work`; see
    [Bounding the work per cell](#bounding-the-work-per-cell).
 
@@ -155,20 +181,16 @@ therefore run out of values well short of the header width, and the `?` that
 follow mean "not computed", not "no EGZ constant".
 
 ## Search bounds
-`--m-max` and `--t-max` are not merely loop limits.
+`--t-max` sets the last column computed, but it also has to exceed every element
+multiplicity the search reaches — not just the largest `t` you want. A search
+that reaches 30 copies of one element wants `--t-max 31`, whatever `t` is. Too
+low on that count only costs speed, never correctness.
 
-`m` indexes the solver's per-degree memo tables, so `m >= M_MAX()` is out of
-bounds; `EGZSolver::EGZ` rejects it rather than corrupting memory. Before this
-was guarded, computing a table with rows past the compiled bound segfaulted.
+`--m-max` is the harder bound: a row past it is refused outright rather than
+computed, so raise it before asking for one.
 
-`--t-max` doubles as the radix in which `sequence::identifier()` packs element
-multiplicities, so multiplicities at or above it collide. That is now a
-performance concern only, not a correctness one: `sequence::operator==` compares
-multiplicities directly, so a collision costs an extra bucket probe instead of
-returning another sequence's memoized value.
-
-The compiled-in defaults can be changed with `-DEGZ_M_MAX=` / `-DEGZ_T_MAX=`;
-the CLI flags override them at run time.
+Both have compiled-in defaults, changeable with `-DEGZ_M_MAX=` / `-DEGZ_T_MAX=`,
+and the CLI flags override them at run time.
 
 ## Tests
 ```sh
@@ -176,12 +198,15 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Two suites run:
+Five suites run, in a few seconds:
 
- - `regression` replays 164 known-good values sampled from `Experimental tables/`
+ - `regression` replays 176 known-good values sampled from `Experimental tables/`
    across all nine tables.
  - `thesis_verification` checks the committed tables against the theorems proved
-   in the accompanying thesis, covering roughly 12,000 cells.
+   in the accompanying thesis.
+ - `rings` checks the rings themselves: ring axioms, and that each `Z_n[x]/(P)`
+   reproduces the built-in ring it generalises.
+ - `skip_rules` and `max_work` drive those two options through the CLI.
 
 See [tests/README.md](tests/README.md).
 
@@ -191,7 +216,8 @@ See [tests/README.md](tests/README.md).
 | `main.cpp` | CLI and the table writer. |
 | `egz_solver.hpp` | The search itself: `e_m`, counterexample enumeration, `EGZ(t, m)`. |
 | `rings.hpp` | Ring implementations (`Zn`, `Znp`, `F4`, `Z_2_over`, `product`). |
-| `ring_registry.hpp` | Maps a `--ring` name to its type. |
+| `quotient.hpp` | Parses and builds the `Z_n[x]/(P)` rings named at run time. |
+| `ring_registry.hpp` | Maps a `--ring` name or spec to its ring. |
 | `sequence.hpp` | Multiset of ring elements, with hashing for memoization. |
 | `config.hpp` | Search bounds (`M_MAX`, `T_MIN`, `T_MAX`). |
 | `skip_rule.hpp` | Parses and applies the `--skip` expressions. |
@@ -199,45 +225,6 @@ See [tests/README.md](tests/README.md).
 
 Everything but `main.cpp` is a header, so the project builds as one translation
 unit. Each header is self-contained and guarded with `#pragma once`.
-
-## Runtime rings
-
-Every ring above is a C++ type fixed when the binary is compiled. `--ring` also
-accepts a quotient written out as a string, which is built while the program
-starts:
-
-```sh
-./build/egz-solver --ring 'Z_2[x]/(x^2+x+1)'
-./build/egz-solver --ring 'Z_4[x]/(x^2+1)'
-./build/egz-solver --ring Z_2x_by_x2+x+1      # the same ring, no quoting needed
-```
-
-`P` must have degree at least 1 and a leading coefficient invertible mod `n`;
-such a `P` is divided through by it and stored monic. That requirement is not
-bureaucratic. Reduction works by rewriting $x^d$ as $-(P_0 + \dots + P_{d-1}
-x^{d-1})$, which is only a rewrite rule when the leading coefficient is a unit —
-with a zero divisor there the quotient is not free over $ℤ_n$ and its elements
-have no unique normal form.
-
-The ring has $n^{\deg P}$ elements, with $\{1, x, \dots, x^{d-1}\}$ as a basis
-and $(a_0 \dots a_{d-1})$ stored at index $\sum a_i n^i$. Its characteristic is
-exactly $n$: a monic $P$ of degree $\ge 1$ generates an ideal containing no
-nonzero constant, so nothing collapses. Operation tables are built once at
-startup, so the inner loop costs the same table lookup the hand-written rings
-cost. Rings are capped at 256 elements, far past what is searchable.
-
-A ring is named `Z_nx_by_P`, which is what `EGZ_<name>.tsv` is keyed on, and
-which `--ring` accepts back — so a name always names one ring.
-
-Two consequences worth knowing:
-
- - `Z_2[x]/(x^2)` and `Z_2[x]/(x^2+x+1)` are the hand-written `Z_2x_by_x2` and
-   `F_4`. They produce byte-identical operation tables *and* byte-identical EGZ
-   tables; `tests/test_rings.py` checks both. The compiled-in rings still win
-   when a name matches, since the published tables were computed with them.
- - Unlike the compiled-in rings, `order` here is not a compile-time constant.
-   `sequence` and `EGZSolver` only ever read `R::order` as a value, so this
-   costs nothing, but it is why `sequence::n` is a plain member.
 
 ## Adding a ring
 1. Implement the ring in `rings.hpp`. Use `class ring` as the checklist of what
@@ -253,11 +240,8 @@ Two consequences worth knowing:
 Rows are left out with `--skip` at run time, so a ring needs no hook for that.
 
 A quotient of $ℤ_n[x]$ needs none of this — see [Runtime rings](#runtime-rings).
-Extending that to several variables means changing `buildBasis()` in
-`quotient.hpp` and nothing else: the ring is described by a basis of monomials
-plus the expansion of each pairwise product of basis monomials back into that
-basis, and everything downstream is written against that rather than against
-powers of a single `x`.
+Extending those to several variables means changing `buildBasis()` in
+`quotient.hpp`; the rest of that file is written not to care.
 
 ## License
 
