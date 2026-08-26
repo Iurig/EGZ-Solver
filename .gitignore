@@ -4,3 +4,11 @@ main
 *.ilk
 *.obj
 *.pdb
+build/
+
+# Reference documents kept locally, not published
+*.pdf
+
+# Python bytecode
+__pycache__/
+*.pyc

@@ -1,19 +1,26 @@
-#ifdef DEBUG
-#include <iostream>
-#endif
+#pragma once
 
-#include "rings.cpp"
-#include "sequence.cpp"
+#include <iostream>
+
+#include <cstdlib>
 #include <unordered_map>
+#include <vector>
+
+#include "config.hpp"
+#include "rings.hpp"
+#include "sequence.hpp"
 
 using namespace std;
 
 template <typename R>
 class EGZSolver {
 private:
-  unordered_map<sequence<R>, R> memorized_e_m[M_MAX];
+  // One memo table per m; sized from M_MAX() at construction.
+  vector<unordered_map<sequence<R>, R>> memorized_e_m;
 
 public:
+  EGZSolver() : memorized_e_m(M_MAX() + 1) {}
+
   sequence<R> subseq = sequence<R>();
   // Calculates e_m(S)
   R e_m(sequence<R> &S, int m) {
@@ -78,23 +85,34 @@ public:
       bool isCE = !checkSubsets(t, m, prev);
       if (isCE) {
 #ifdef DEBUG
-        cout << "Found CE of size " << size << " for t = " << t << " and m = " << m << ": ";
-        for (int i = 0; i < R::order; i++)
-          cout << prev.count(i) << " ";
-        cout << endl;
+        if (egz::verbose) {
+          cout << "Found CE of size " << size << " for t = " << t << " and m = " << m << ": ";
+          for (int i = 0; i < R::order; i++)
+            cout << prev.count(i) << " ";
+          cout << endl;
+        }
 #endif
       }
       return isCE;
     }
   }
 
-  // Calculates EGZ(t, m) for ring R
+  // Calculates EGZ(t, m) for ring R.
+  // Returns 0 when no EGZ constant exists for this (t, m).
   int EGZ(int t, int m) {
+    // m indexes memorized_e_m directly, so an out-of-range m would corrupt
+    // memory rather than fail. T_MAX needs no such guard: it is only the
+    // identifier() hash radix, and sequence::operator== compares contents.
+    if (m < 0 || m >= (int)memorized_e_m.size()) {
+      cerr << "EGZ: m=" << m << " is outside the compiled bound M_MAX=" << M_MAX() << "; raise --m-max" << endl;
+      exit(2);
+    }
     sequence<R> t_choose_m;
     t_choose_m.insert(R::unit, t);
     if (e_m(t_choose_m, m) != 0) {
 #ifdef DEBUG
-      cout << "em = " << e_m(t_choose_m, m).value << ", t = " << t << ", m = " << m << endl;
+      if (egz::verbose)
+        cout << "em = " << e_m(t_choose_m, m).value << ", t = " << t << ", m = " << m << endl;
 #endif
       return 0;
     }
@@ -102,7 +120,8 @@ public:
     while (CE(t, m, l)) {
       l++;
 #ifdef DEBUG
-      cout << "testing t = " << t << " and m = " << m << ", l = " << l << endl;
+      if (egz::verbose)
+        cout << "testing t = " << t << " and m = " << m << ", l = " << l << endl;
 #endif
     }
     return l;

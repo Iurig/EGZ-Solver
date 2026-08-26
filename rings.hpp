@@ -1,3 +1,7 @@
+#pragma once
+
+#include <iostream>
+#include <numeric>
 #include <string>
 
 using namespace std;
@@ -74,7 +78,15 @@ public:
 template <int n, int p>
 class Znp : public ring {
 public:
-  static constexpr int characteristic = p, order = p * n;
+  // Znp<n, p> is (Z_n)^p: p components, each in Z_n. So it has n^p elements and
+  // characteristic n -- not p * n and p, which only coincide when n = p = 2.
+  static constexpr int orderCalc() {
+    int e = 1;
+    for (int i = 0; i < p; i++)
+      e *= n;
+    return e;
+  }
+  static constexpr int characteristic = n, order = orderCalc();
   static constexpr int unitCalc() {
     int power = 1, resp = 0;
     for (int i = 0; i < p; i++) {
@@ -135,7 +147,8 @@ public:
 
 class Z_2_over : public ring {
 public:
-  static constexpr int characteristic = 4, order = 4, unit = 1;
+  // 4 elements but characteristic 2: every element satisfies a + a = 0.
+  static constexpr int characteristic = 2, order = 4, unit = 1;
   // clang-format off
   static constexpr int sum[4][4] = // +      0   1   x   x+1
                                    //------------------------
@@ -174,7 +187,8 @@ public:
 
 class F4 : public ring {
 public:
-  static constexpr int characteristic = 4, order = 4, unit = 1;
+  // 4 elements but characteristic 2: every element satisfies a + a = 0.
+  static constexpr int characteristic = 2, order = 4, unit = 1;
   // clang-format off
   static constexpr int sum[4][4] = // +      0   1   x   x+1
                                    //------------------------
@@ -223,5 +237,5 @@ public:
   }
 
   // Ring name
-  static string name() { return "(" + R::name() + ", " + R::name() + ")"; };
+  static string name() { return "(" + R::name() + ", " + P::name() + ")"; };
 };

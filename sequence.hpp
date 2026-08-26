@@ -1,8 +1,12 @@
+#pragma once
+
+#include <cstddef>
 #include <cstdlib>
 #include <functional>
+#include <iostream>
 #include <vector>
 
-#include "config.cpp"
+#include "config.hpp"
 
 using namespace std;
 
@@ -38,7 +42,18 @@ public:
     }
     return h;
   }
-  bool operator==(const sequence<R> &o) const { return identifier() == o.identifier(); }
+  // Exact counterpart to identifier(), which hashes multiplicities of the
+  // non-zero elements only. Ignoring c[0] is deliberate and sound for the
+  // memoized quantity: adding a zero element contributes 0 * e_{m-1}, so
+  // e_m is unchanged by it, and conflating those sequences keeps the memo
+  // much smaller. Comparing the counts rather than the identifiers means a
+  // hash collision costs a bucket probe instead of returning a wrong entry.
+  bool operator==(const sequence<R> &o) const {
+    for (int i = 1; i < n; i++)
+      if (c[i] != o.c[i])
+        return false;
+    return true;
+  }
   bool empty() { return size() == 0; }
   bool operator<(const sequence<R> &other) const { return c < other.c; }
   size_t count(const R &x) { return c[x.value]; }

@@ -1,19 +1,20 @@
-#include <stdio.h>
-
-#include <assert.h>
+#include <cstdlib>
 #include <iostream>
+#include <string>
 
-#define DEBUG
+#include "conditional_file_stream.hpp"
+#include "config.hpp"
+#include "egz_solver.hpp"
+#include "ring_registry.hpp"
 
-#include "conditional_file_stream.cpp"
-#include "egz_solver.cpp"
+using namespace std;
 
-#define TO_FILE true
-
+// Writes one table for ring R: rows are m, columns are t, and each cell holds
+// EGZ(t, m) - t. See "Output format" in README.md.
 template <typename R>
-void findEGZs(int m_max = M_MAX, int m_min = 1) {
+void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool quiet) {
   string output_file_name = "EGZ_" + R::name() + ".tsv";
-  ConditionalFileStream output_file(output_file_name, TO_FILE);
+  ConditionalFileStream output_file(output_file_name, to_file, out_dir);
 
   EGZSolver<R> s;
 
@@ -38,9 +39,11 @@ void findEGZs(int m_max = M_MAX, int m_min = 1) {
             output_file << "\t";
           continue;
         }
-        cout << "EGZ(" << t << ", " << R::name() << ", " << m << ") = " << e << endl;
-        cout << "EGZ-t = " << max(e - t, -1) << endl;
-        cout << endl;
+        if (!quiet) {
+          cout << "EGZ(" << t << ", " << R::name() << ", " << m << ") = " << e << endl;
+          cout << "EGZ-t = " << max(e - t, -1) << endl;
+          cout << endl;
+        }
         output_file << e - t;
       }
       if (t < T_MAX(m_max) - 1)
@@ -51,10 +54,110 @@ void findEGZs(int m_max = M_MAX, int m_min = 1) {
   }
 }
 
-int main() {
-  // basic testing
-  EGZSolver<Znp<2, 2>> s;
-  assert(s.EGZ(16, 8) == 33);
-  assert(s.EGZ(17, 8) == 33);
-  findEGZs<Zn<7>>();
+static void usage() {
+  cout << "usage: egz-solver [options]\n"
+       << "\n"
+       << "  --ring NAME     ring to compute (default: Z_7); --list-rings to see all\n"
+       << "  --m-min N       first m to compute (default: 1)\n"
+       << "  --m-max N       exclusive upper bound on m (default: " << M_MAX() << ")\n"
+       << "  --t-max N       exclusive upper bound on t (default: " << T_MAX() << ")\n"
+       << "  --out-dir DIR   directory for the .tsv (default: " << DEFAULT_OUTPUT_DIR << ")\n"
+       << "  --no-file       print progress only, do not write a table\n"
+       << "  --quiet         suppress per-value progress output\n"
+       << "  --list-rings    list supported ring names and exit\n"
+       << "  -h, --help      show this message\n"
+       << "\n"
+       << "--t-max is also the radix used to hash sequences, so it must exceed every\n"
+       << "multiplicity the search reaches, not just the t values you want. The solver\n"
+       << "stops with an error rather than return a wrong answer if it is too small.\n";
+}
+
+// Parses the integer argument for `flag`, advancing i past it.
+static int intArg(int &i, int argc, char **argv, const string &flag) {
+  if (i + 1 >= argc) {
+    cerr << flag << " requires a value" << endl;
+    exit(2);
+  }
+  string raw = argv[++i];
+  try {
+    size_t consumed = 0;
+    int value = stoi(raw, &consumed);
+    if (consumed != raw.size())
+      throw invalid_argument("trailing characters");
+    return value;
+  } catch (const exception &) {
+    cerr << flag << ": expected an integer, got '" << raw << "'" << endl;
+    exit(2);
+  }
+}
+
+int main(int argc, char **argv) {
+  string ring = "Z_7";
+  string out_dir = DEFAULT_OUTPUT_DIR;
+  int m_min = 1;
+  int m_max = M_MAX();
+  int t_max = T_MAX();
+  bool to_file = true, quiet = false;
+
+  for (int i = 1; i < argc; i++) {
+    string arg = argv[i];
+    if (arg == "-h" || arg == "--help") {
+      usage();
+      return 0;
+    } else if (arg == "--list-rings") {
+      for (const string &n : ringNames())
+        cout << n << endl;
+      return 0;
+    } else if (arg == "--ring") {
+      if (i + 1 >= argc) {
+        cerr << "--ring requires a value" << endl;
+        return 2;
+      }
+      ring = argv[++i];
+    } else if (arg == "--out-dir") {
+      if (i + 1 >= argc) {
+        cerr << "--out-dir requires a value" << endl;
+        return 2;
+      }
+      out_dir = argv[++i];
+    } else if (arg == "--m-min") {
+      m_min = intArg(i, argc, argv, arg);
+    } else if (arg == "--m-max") {
+      m_max = intArg(i, argc, argv, arg);
+    } else if (arg == "--t-max") {
+      t_max = intArg(i, argc, argv, arg);
+    } else if (arg == "--no-file") {
+      to_file = false;
+    } else if (arg == "--quiet") {
+      quiet = true;
+    } else {
+      cerr << "unknown option: " << arg << endl << endl;
+      usage();
+      return 2;
+    }
+  }
+
+  if (m_min < 1 || m_max <= m_min) {
+    cerr << "need 1 <= --m-min < --m-max (got " << m_min << " and " << m_max << ")" << endl;
+    return 2;
+  }
+  if (t_max < 2) {
+    cerr << "--t-max must be at least 2 (got " << t_max << ")" << endl;
+    return 2;
+  }
+
+  // Must happen before any EGZSolver is built: solvers size their memo tables
+  // from M_MAX() at construction.
+  setSearchBounds(m_max, t_max);
+  setVerbose(!quiet);
+
+  bool known = dispatchRing(ring, [&](auto tag) {
+    using R = typename decltype(tag)::type;
+    findEGZs<R>(m_max, m_min, out_dir, to_file, quiet);
+  });
+  if (!known) {
+    cerr << "unknown ring: " << ring << " (try --list-rings)" << endl;
+    return 2;
+  }
+  return 0;
 }
