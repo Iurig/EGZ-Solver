@@ -129,3 +129,17 @@ unit. Each header is self-contained and guarded with `#pragma once`.
 2. Add the type to `AllRings` in `ring_registry.hpp`. It is then selectable by
    its `name()` via `--ring`.
 3. Optionally override `static bool skip(int m)` to leave rows out of the table.
+
+## License
+
+The code is under the [MIT License](LICENSE); the computed tables in
+`experimental-tables/` are under
+[CC BY 4.0](experimental-tables/LICENSE). Copyright (c) 2026 Iuri Grangeiro
+Carvalho.
+
+The split is deliberate: Creative Commons licenses are not intended for
+software, and a software license sits awkwardly on what is essentially
+mathematical data. In practice this means you may use the solver freely with
+attribution preserved in the source, and reuse or republish the tables provided
+you give credit. See [experimental-tables/README.md](experimental-tables/README.md)
+for a suggested citation.
