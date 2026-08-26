@@ -22,11 +22,14 @@ from math import comb
 
 # --- ring metadata -----------------------------------------------------------
 # order = number of elements, char = characteristic. `t_limit` is the exclusive
-# upper bound on t the table was generated with, as a function of m. Most tables
-# used a flat bound (the full header width), but EGZ_Z_2x_by_x2.tsv was produced
-# with the variable form that survives commented out in config.hpp:
-# smallestPowerBiggerThan(2, m) + m + 1. Cells past a row's limit were never
-# computed and so carry "?".
+# upper bound on t the table was generated with, as a function of m: cells past
+# a row's limit were never computed and so must carry "?", not a blank.
+#
+# Every table currently uses the flat bound -- the full header width -- so no
+# table needs the variable form today. It stays because a table generated with a
+# per-row bound is a thing that has happened here: EGZ_Z_2x_by_x2.tsv used
+# smallestPowerBiggerThan(2, m) + m + 1, the form that survives commented out in
+# config.hpp, until it was recomputed across its full width.
 FLAT = None
 
 # Marks a cell holding no value: never computed for that row, or abandoned under
@@ -43,12 +46,7 @@ RINGS = {
     # 4-element rings of characteristic 2 -- not Z_4.
     "EGZ_Z_2^2.tsv": dict(order=4, char=2, cyclic=None, t_limit=FLAT),
     "EGZ_F_4.tsv": dict(order=4, char=2, cyclic=None, t_limit=FLAT),
-    "EGZ_Z_2x_by_x2.tsv": dict(
-        order=4,
-        char=2,
-        cyclic=None,
-        t_limit=lambda m: smallest_power_bigger_than(2, m) + m + 1,
-    ),
+    "EGZ_Z_2x_by_x2.tsv": dict(order=4, char=2, cyclic=None, t_limit=FLAT),
 }
 
 

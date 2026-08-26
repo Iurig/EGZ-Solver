@@ -1,13 +1,5 @@
 #pragma once
 
-inline long long smallestPowerBiggerThan(long long base, long long value) {
-  long long i = 1;
-  while (i <= value) {
-    i *= base;
-  }
-  return i;
-}
-
 // Search bounds: all values of m < M_MAX() and T_MIN(m) <= t < T_MAX(m).
 //
 // These are correctness invariants, not just loop limits:

@@ -239,15 +239,13 @@ Within a row's computed range, a $ℤ_n$ cell holds a value exactly when
 $\binom{t}{m} \equiv 0 \pmod n$ and is blank otherwise, which is a useful sanity
 check on a generated table.
 
-All 6,125 such cells across the committed $ℤ_n$ tables satisfy that criterion;
+All 7,175 such cells across the committed $ℤ_n$ tables satisfy that criterion;
 `tests/verify_against_thesis.py` checks it, along with the rule that everything
 outside a computed range carries `?`.
 
-Note that `EGZ_Z_2x_by_x2.tsv` was generated with a per-row bound on `t` --
-`smallestPowerBiggerThan(2, m) + m + 1`, the form that survives commented out in
-`config.hpp` -- rather than the flat bound the other eight tables use. Its rows
-therefore run out of values well short of the header width, and the `?` that
-follow mean "not computed", not "no EGZ constant".
+Eight of the nine tables are computed to the full width of their header, so the
+only `?` in them are below the diagonal. `EGZ_Z_8.tsv` is the exception: its
+widest columns are still open for the largest `m`, and carry `?` there.
 
 ## Search bounds
 `--t-max` sets the last column computed, but it also has to exceed every element
