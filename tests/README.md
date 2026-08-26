@@ -138,9 +138,9 @@ Regenerate the goldens after deliberately changing a ring:
 
 ## Two searches, checked against each other
 
-There are two implementations of `EGZ(t, m)` -- see "Two searches" in the
-[top-level README](../README.md). They share only `sequence` and the ring: the
-`e_m` recurrence and the memo are written separately in each. That is what makes
+There are two implementations of `EGZ(t, m)` -- see "How the search works" in
+the [top-level README](../README.md). They share only `sequence` and the ring:
+the `e_m` recurrence and the memo are written separately in each. That is what makes
 agreement between them evidence rather than a tautology, and it is why the
 duplication is deliberate rather than something to factor out.
 

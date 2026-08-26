@@ -47,6 +47,7 @@ same either way.
 | `--max-work N` | Give up on a cell after `N` work units; `0` is unlimited. See [Bounding the work per cell](#bounding-the-work-per-cell). |
 | `--no-file` | Print progress only; write nothing. |
 | `--quiet` | Suppress per-value progress output. |
+| `--method WHICH` | `bottom-up` (default) or `top-down`. See [How the search works](#how-the-search-works). |
 | `--list-rings` | List supported ring names and exit. |
 
 The output directory is relative to the working directory and is created if
@@ -151,91 +152,67 @@ A budget only costs you answers, it never changes them: any cell that finishes
 under a budget holds exactly the value an unbudgeted run produces. Raising the
 budget can only turn `?` into a value, never alter one.
 
-## Two searches
+## How the search works
 
-There are two implementations of `EGZ(t, m)`, and `--method` picks between them.
-They agree everywhere they have been compared; the reason to have both is that
-each one checks the other, and they are fast in different places.
+`EGZ(t, m)` is computed level by level. The solver finds every multiset of size
+`t` with `e_m = 0`, then every multiset of size `t + 1` containing one of those,
+then every one of size `t + 2` containing one of *those*, and stops at the first
+size where every multiset is covered. That size is the answer.
 
-```sh
-./build/egz-solver --ring Z_7 --method bottom-up
-```
-
-**Top-down** (the default, `egz_solver.hpp`) takes each candidate length `l` in
-turn and searches for a counterexample: a sequence of length `l` with no
-zero-`e_m` subsequence of length `t`. The first `l` with no counterexample is the
-answer. It can stop the moment it finds one, and often does.
-
-**Bottom-up** (`egz_bottom_up.hpp`) works the other way. It finds every multiset
-of size `t` with `e_m = 0`, then every multiset of size `t + 1` containing one of
-those, and so on, stopping at the first size where every multiset is covered.
-Each level is one flat pass, because for `|S| > t` a multiset is covered exactly
-when `S - x` is covered for some `x` in it — no search and no backtracking.
-
-Only *which* `e_m` are zero ever matters to it: the values are computed once at
+Each level is a single flat pass with no search and no backtracking, because for
+`|S| > t` a multiset is covered exactly when `S - x` is covered for some `x` in
+it. Only *which* `e_m` are zero ever matters: the values are computed once at
 level `t` and never looked at again.
 
-That first step is also where its time goes. Deciding which `e_m` vanish takes
-61–72% of the total across the rings measured, despite touching roughly a tenth
-as many multisets as the climb above it — a multiset costs around 270 ns at
-level `t` against 13 ns on the way up. The climb is nearly free; the `e_m`
-evaluations are the bottleneck, and they are the part worth optimising.
+Two consequences are worth knowing before running anything large.
 
-The trade is that bottom-up visits every multiset of every level, where top-down
-can stop early — but it never re-derives anything, and top-down re-derives a
-great deal, since each candidate length starts a fresh search over ground the
-last one covered.
+**The `e_m` evaluations are the bottleneck**, not the levels. Deciding which
+`e_m` vanish takes 61–72% of the time across the rings measured, despite
+touching roughly a tenth as many multisets as the climb above it — about 270 ns
+per multiset at level `t` against 13 ns on the way up.
 
-Sweeping `m < 12`, `t < 24`, every cell agreeing, with
-`tests/compare_methods.cpp`:
+**Memory has a ceiling.** Two levels are live at a time, one bit per multiset,
+and a level of size `l` over a ring of order `k` holds `C(l + k - 1, k - 1)` of
+them. Past `EGZ_MAX_LEVEL` the solver writes `?` rather than trying to allocate.
+The default admits about 200 MB of levels, which is generous on purpose:
+`EGZ(12, Z_12, 1)` — the classical Erdős-Ginzburg-Ziv case, answer `2n - 1 = 23`
+— needs a level of 548 million multisets, and solves in 17.5 s using 282 MB.
+Lower it with `-DEGZ_MAX_LEVEL=` if memory matters more than reach.
 
-| Ring | Time, top-down | Time, bottom-up | `e_m` memo, top-down | memo, bottom-up | Peak levels |
-| --- | --- | --- | --- | --- | --- |
-| `Z_3` | 3 ms | 2 ms | 2.8k entries | 3.0k | 435 multisets |
-| `F_4` | 89 ms | 35 ms | 24.4k | 25.7k | 7.1k |
-| `Z_2^2` | 307 ms | 45 ms | 24.4k | 25.7k | 11.5k |
-| `Z_5` | 368 ms | 140 ms | 134k | 140k | 36k |
-| `Z_7` | 77.1 s | 10.0 s | 4.27M | 4.43M | 3.26M |
+For most rings none of this binds: on a `Z_7` sweep the levels came to 796 KiB
+against 375 MiB of `e_m` memo, so the memo is what you actually pay for.
 
-**Time** goes to bottom-up everywhere measured, by more as the ring grows: 1.5×
-on `Z_3`, 7.7× on `Z_7`. Per cell the spread is wider than the totals suggest —
-the worst `Z_7` cells run 5.0 s against 0.35 s, a 14× gap — and across 198 `Z_7`
-cells there was **no cell where bottom-up was slower**.
+### The other search
 
-The reason is that top-down re-derives. Each candidate length starts a fresh
-counterexample search over ground the previous one covered, so a cell answering
-at `l = t + 9` has run nine overlapping searches; bottom-up builds each level
-once from the one below.
+`--method top-down` selects a second, independent implementation
+(`egz_solver.hpp`). It takes each candidate length `l` in turn and searches for a
+counterexample — a sequence of length `l` with no zero-`e_m` subsequence of
+length `t` — and returns the first `l` that has none.
 
-**Memory is close to a tie**, which is not what the descriptions suggest. Both
-are dominated by the memo of `e_m` results — around 375 MiB of it on that `Z_7`
-sweep — and bottom-up's is 3-5% larger, because it evaluates `e_m` on every
-multiset of size `t` rather than only the ones a search happens to reach. The
-levels it additionally holds are two at a time at one bit per multiset: **796 KiB
-against 375 MiB** on `Z_7`. The sweep is the cheap part.
+It exists because two implementations that agree are worth more than one that
+does not disagree with itself. They share only `sequence` and the ring; the `e_m`
+recurrence and the memo are written separately in each, and
+[the test suite](tests/README.md) holds them to producing identical tables.
 
-The level term is still the one with a ceiling, though. A level of size `l` over
-a ring of order `k` holds `C(l + k - 1, k - 1)` multisets, growing fast in both,
-so a large enough ring with a large enough answer does eventually become
-level-dominated. Past `EGZ_MAX_LEVEL` bottom-up returns `?` rather than trying
-to allocate; top-down has no such ceiling.
+It is also slower, because each candidate length starts a fresh search over
+ground the previous one covered. Sweeping `m < 12`, `t < 24` with
+`tests/compare_methods.cpp`, every cell agreeing:
 
-That cap is worth knowing about, because setting it too tight throws away cells
-the method could otherwise do. `EGZ(12, Z_12, 1)` is the classical
-Erdős-Ginzburg-Ziv case, answer `2n - 1 = 23`. Its top level holds 548 million
-multisets, so a 40M cap abandons it in 3 seconds while a cap that admits it
-solves it in **17.5 s using 282 MB** — and top-down, on the same cell, reaches
-`l = 23` quickly but had not finished proving there is no counterexample there
-after two minutes. The default cap is set high for that reason; lower it with
-`-DEGZ_MAX_LEVEL=` if the memory matters more than the reach.
+| Ring | Top-down | Bottom-up |
+| --- | --- | --- |
+| `Z_3` | 3 ms | 2 ms |
+| `F_4` | 89 ms | 35 ms |
+| `Z_2^2` | 307 ms | 45 ms |
+| `Z_5` | 368 ms | 140 ms |
+| `Z_7` | 77.1 s | 10.0 s |
 
-So the honest summary is that bottom-up won every cell where both finished, and
-the one cell found where it gives up is one top-down could not do either.
+Across 198 `Z_7` cells there was no cell where bottom-up was slower, and the
+worst ran 5.0 s against 0.35 s. Memory is near a tie: both are dominated by the
+`e_m` memo, and bottom-up's is 3–5% larger because it evaluates `e_m` on every
+multiset of size `t` rather than only the ones a search reaches.
 
-Neither is a wrapper around the other: they have separate `e_m` implementations
-and separate memos, sharing only `sequence` and the ring. That is what makes
-their agreement worth something — see
-[Two searches, checked against each other](tests/README.md).
+What top-down still has is no ceiling — it never holds a level. The one cell
+found where bottom-up gives up, though, is one top-down could not finish either.
 
 ## Output format
 One `.tsv` per ring, named `EGZ_<ring>.tsv`. **Rows are `m`, columns are `t`, and
@@ -294,7 +271,7 @@ Eight suites run, in a few seconds:
 
  - `regression` and `regression_bottom_up` replay 176 known-good values sampled
    from `Experimental tables/` across all nine tables — once with each of the
-   [two searches](#two-searches).
+   [two searches](#the-other-search).
  - `methods_agree` and `methods_agree_f4` run both searches over every cell of a
    small sweep and fail on any disagreement.
  - `thesis_verification` checks the committed tables against the theorems proved

@@ -112,9 +112,9 @@ static void usage() {
        << "                  Skipped rows are omitted, not written blank.\n"
        << "  --max-work N    give up on a cell after N work units (0 = no limit).\n"
        << "                  Abandoned cells are written as ?, never left blank.\n"
-       << "  --method WHICH  top-down (default) or bottom-up. Two independent\n"
-       << "                  searches that agree; bottom-up is usually faster but\n"
-       << "                  holds a whole level in memory. See README.md.\n"
+       << "  --method WHICH  bottom-up (default) or top-down: two independent\n"
+       << "                  searches that agree. top-down is slower but has no\n"
+       << "                  ceiling on memory. See README.md.\n"
        << "  --no-file       print progress only, do not write a table\n"
        << "  --quiet         suppress per-value progress output\n"
        << "  --list-rings    list supported ring names and exit\n"
@@ -150,7 +150,7 @@ int main(int argc, char **argv) {
   int m_min = 1;
   int m_max = M_MAX();
   int t_max = T_MAX();
-  bool to_file = true, quiet = false, bottom_up = false;
+  bool to_file = true, quiet = false, bottom_up = true;
   long long max_work = 0;
   vector<string> skip_specs;
 
