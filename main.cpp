@@ -80,7 +80,7 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
 static void usage() {
   cout << "usage: egz-solver [options]\n"
        << "\n"
-       << "  --ring NAME     ring to compute (default: Z_7); --list-rings to see all\n"
+       << "  --ring NAME     ring to compute (default: Z_2); --list-rings to see all\n"
        << "  --m-min N       first m to compute (default: 1)\n"
        << "  --m-max N       exclusive upper bound on m (default: " << M_MAX() << ")\n"
        << "  --t-max N       exclusive upper bound on t (default: " << T_MAX() << ")\n"
@@ -123,7 +123,7 @@ static int intArg(int &i, int argc, char **argv, const string &flag) {
 }
 
 int main(int argc, char **argv) {
-  string ring = "Z_7";
+  string ring = "Z_2";
   string out_dir = DEFAULT_OUTPUT_DIR;
   int m_min = 1;
   int m_max = M_MAX();

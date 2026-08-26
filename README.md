@@ -31,12 +31,12 @@ same either way.
 
 ## Running
 ```sh
-./build/egz-solver --ring Z_7 --m-max 20 --t-max 25
+./build/egz-solver --ring Z_2 --m-max 20 --t-max 25
 ```
 
 | Option | Meaning |
 | --- | --- |
-| `--ring NAME` | Ring to compute (default `Z_7`). |
+| `--ring NAME` | Ring to compute (default `Z_2`). |
 | `--m-min N` | First `m` to compute (default 1). |
 | `--m-max N` | Exclusive upper bound on `m`. |
 | `--t-max N` | Exclusive upper bound on `t`. |
@@ -123,7 +123,8 @@ header; the first column is `m`.
 
 So a cell containing `6` at row `m = 1`, column `t = 21` means `EGZ(21, 1) = 27`.
 
-A blank cell means the solver computed that `(t, m)` and got that `EGZ(t, m)` is infinite/no EGZ constant exists there. A blank is an answer.
+A blank cell means the solver computed that `(t, m)` and got that `EGZ(t, m)` is 
+infinite/no EGZ constant exists there. A blank is an answer.
 
 **A `?` means no value was computed**, for one of three reasons:
  - `t < T_MIN(m)`, i.e. `t < m` — left of the diagonal, outside the row's range
