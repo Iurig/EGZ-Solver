@@ -243,9 +243,8 @@ All 7,175 such cells across the committed $ℤ_n$ tables satisfy that criterion;
 `tests/verify_against_thesis.py` checks it, along with the rule that everything
 outside a computed range carries `?`.
 
-Eight of the nine tables are computed to the full width of their header, so the
-only `?` in them are below the diagonal. `EGZ_Z_8.tsv` is the exception: its
-widest columns are still open for the largest `m`, and carry `?` there.
+Every table is computed to the full width of its header, so the only `?` in the
+committed data are below the diagonal.
 
 ## Search bounds
 `--t-max` sets the last column computed, but it also has to exceed every element

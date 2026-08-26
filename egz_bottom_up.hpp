@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <chrono>
 #include <iostream>
+#include <new>
+#include <stdexcept>
 #include <unordered_map>
 #include <vector>
 
@@ -194,11 +196,48 @@ public:
   unsigned long long climbCells() const { return climb_cells; }
 
   // Same contract as the top-down search: 0 when no EGZ constant exists, and
-  // EGZ_ABANDONED when --max-work or the level cap stopped it early.
+  // EGZ_ABANDONED when --max-work, the level cap, or memory stopped it early.
   //
   // A work unit here is one multiset visited, which is not the unit the
   // top-down search charges, so --max-work means different things to the two.
+  //
+  // MAX_LEVEL_SIZE bounds a level, but nothing bounds the e_m memo: it grows
+  // with every cell in the table and is never dropped, because that reuse is
+  // most of why this search is fast. On a big enough ring it can exhaust
+  // memory -- an EGZ_Z_8.tsv sweep peaks near 12 GB -- and an allocation that
+  // fails there used to abort the process, losing not just the cell but every
+  // row after it. Running out of memory is a cell this search cannot do, which
+  // is what EGZ_ABANDONED already means, so say that instead and let the table
+  // finish. The memo goes with it: after this the process is at the wall, and
+  // holding a cache no later cell can afford would abandon those too.
   int EGZ(int t, int m) {
+    try {
+      return search(t, m);
+    } catch (const std::bad_alloc &) {
+      dropMemo();
+      return EGZ_ABANDONED;
+    } catch (const std::length_error &) {
+      // A level too large for a vector<bool> to index at all. Reachable only
+      // past MAX_LEVEL_SIZE, but it is the same answer.
+      dropMemo();
+      return EGZ_ABANDONED;
+    }
+  }
+
+private:
+  // Frees the memo, keeping the per-m indexing EGZ relies on.
+  //
+  // This runs from the catch handler below, where memory is by definition
+  // short, so it must not allocate: building a fresh empty table to swap in
+  // would ask for the memory it is trying to release, and a throw out of a
+  // catch handler is the abort this whole guard exists to avoid. clear()
+  // only releases -- and the nodes it frees are where the memory actually is.
+  void dropMemo() {
+    for (auto &table : memorized_e_m)
+      table.clear();
+  }
+
+  int search(int t, int m) {
     work = 0;
     aborted = false;
     if (m < 0 || m >= (int)memorized_e_m.size()) {

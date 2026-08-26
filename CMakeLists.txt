@@ -46,6 +46,20 @@ add_executable(compare_methods tests/compare_methods.cpp)
 target_link_libraries(compare_methods PRIVATE egz-core)
 target_compile_definitions(compare_methods PRIVATE EGZ_M_MAX=40 EGZ_T_MAX=60)
 
+# Forces allocation failure on the bottom-up search to check it abandons the
+# cell rather than aborting the process. Overrides global operator new, so it
+# must be its own binary.
+add_executable(test_oom_guard tests/test_oom_guard.cpp)
+target_link_libraries(test_oom_guard PRIVATE egz-core)
+if(MSVC)
+  # MSVC's debug CRT allocates container bookkeeping from paths that cannot
+  # throw, so a failing operator new aborts there whatever the code under test
+  # does. Link this one binary against the release runtime so the test measures
+  # the guard rather than the iterator debugger. It shares no object file with
+  # anything else, so the mismatch stays inside it.
+  set_property(TARGET test_oom_guard PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+endif()
+
 # Development tool for regenerating tests/regression_cases.tsv.
 add_executable(table_probe EXCLUDE_FROM_ALL tests/table_probe.cpp)
 target_link_libraries(table_probe PRIVATE egz-core)
@@ -66,6 +80,10 @@ add_test(NAME regression_bottom_up
 # nothing at all.
 add_test(NAME methods_agree COMMAND compare_methods Z_2^2 1 7 14)
 add_test(NAME methods_agree_f4 COMMAND compare_methods F_4 1 7 14)
+
+# An out-of-memory cell has to come back as EGZ_ABANDONED and leave the solver
+# usable, so a sweep loses that cell instead of every row after it.
+add_test(NAME oom_guard COMMAND test_oom_guard)
 
 # Checks the committed tables against the published theorems. Pure data check,
 # so it needs only Python; the solver is passed in for the one check (Thm 2.2)
@@ -98,7 +116,7 @@ else()
   message(STATUS "Python3 not found; skipping the thesis_verification test")
 endif()
 
-foreach(t egz-solver run_regression table_probe dump_ring compare_methods)
+foreach(t egz-solver run_regression table_probe dump_ring compare_methods test_oom_guard)
   set_target_properties(${t} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
     RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}
