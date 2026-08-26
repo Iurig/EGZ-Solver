@@ -82,10 +82,13 @@ static void usage() {
        << "\n"
        << "  --ring NAME     ring to compute (default: Z_2); --list-rings to see all.\n"
        << "                  Also accepts a quotient built at run time:\n"
-       << "                    Z_n[x]/(P)   e.g. 'Z_2[x]/(x^2+x+1)', 'Z_4[x]/(x^2+1)'\n"
-       << "                    Z_nx_by_P    the same ring, spelled the way it is named\n"
-       << "                  P needs degree >= 1 and a leading coefficient invertible\n"
-       << "                  mod n; the second spelling needs no shell quoting.\n"
+       << "                    Z_n[vars]/(relations)   'Z_2[x]/(x^2+x+1)'\n"
+       << "                                            'Z_2[x,y]/(x^2,y^2)'\n"
+       << "                    Z_nvars_by_relations    the same ring, spelled the way\n"
+       << "                                            it is named; no shell quoting\n"
+       << "                  One relation per variable, in that variable alone, of\n"
+       << "                  degree >= 1 and with a leading coefficient invertible\n"
+       << "                  mod n.\n"
        << "  --m-min N       first m to compute (default: 1)\n"
        << "  --m-max N       exclusive upper bound on m (default: " << M_MAX() << ")\n"
        << "  --t-max N       exclusive upper bound on t (default: " << T_MAX() << ")\n"
@@ -146,10 +149,11 @@ int main(int argc, char **argv) {
       for (const string &n : ringNames())
         cout << n << endl;
       // On stderr so that piping --list-rings still yields names alone.
-      cerr << "\n--ring also accepts a quotient built at run time, Z_n[x]/(P) with P of\n"
-              "degree >= 1 and a leading coefficient invertible mod n, for example\n"
-              "  --ring 'Z_2[x]/(x^2+x+1)'   --ring 'Z_4[x]/(x^2+1)'\n"
-              "Such a ring is named Z_nx_by_P, which --ring accepts too and needs no quoting.\n";
+      cerr << "\n--ring also accepts a quotient built at run time: Z_n[vars]/(relations),\n"
+              "one relation per variable and in that variable alone. For example\n"
+              "  --ring 'Z_2[x]/(x^2+x+1)'   --ring 'Z_2[x,y]/(x^2,y^2)'\n"
+              "Such a ring is named Z_nvars_by_relations, which --ring accepts too and\n"
+              "needs no quoting: Z_2xy_by_x2_and_y2.\n";
       return 0;
     } else if (arg == "--ring") {
       if (i + 1 >= argc) {

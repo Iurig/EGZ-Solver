@@ -88,7 +88,7 @@ python tests/test_rings.py build/dump_ring --solver build/egz-solver   # adds en
 ```
 
 `dump_ring` prints a ring's order, characteristic, unit and full operation
-tables; `ring_goldens.tsv` holds a dump of every registered ring. Five things
+tables; `ring_goldens.tsv` holds a dump of every registered ring. Six things
 are checked:
 
  - **Axioms.** Every registered ring is a commutative unit ring, verified over
@@ -98,8 +98,10 @@ are checked:
    computed with these exact operation tables, so a silent change to one
    invalidates data already committed.
  - **The reference quotient.** A short, independent implementation of
-   `Z_n[x]/(P)` in the test file reproduces the goldens of `Z_2`, `Z_3`, `Z_5`,
-   `Z_2x_by_x2` and `F_4` exactly.
+   `Z_n[x1..xk]` modulo one relation per variable, written in the test file,
+   reproduces the goldens of `Z_2`, `Z_3`, `Z_5`, `Z_2x_by_x2` and `F_4`
+   exactly -- in one variable and in several, since a relation of degree 1 kills
+   its variable and collapses the ring back onto a smaller one.
  - **The runtime quotient.** Each entry in `EXPECTED` is asked for by `--ring`
    spec and must agree with both the reference and the golden, and must report a
    name usable in `EGZ_<name>.tsv`. A spec the binary does not accept reports
@@ -108,11 +110,16 @@ are checked:
    compared against one computed for the ring it generalises. Equal operation
    tables do not by themselves mean equal output; this covers `e_m`, the
    counterexample search and the memo as well.
+ - **Multivariate rings with no counterpart.** `Z_2[x,y]/(x^2,y^2)` and friends
+   match nothing on file, so all that can be asked is that they are rings, have
+   the expected order, and agree with the reference. These stay small: both
+   checks are cubic or worse in the order, in Python.
 
-The reference is the one that pays for the file. `Z_n[x]/(P)` with the basis
-`{1, x, ..., x^(d-1)}` and an element `(a_0..a_(d-1))` at index `sum(a_i n^i)`
-does not merely become *isomorphic* to the ring it generalises -- it becomes
-*identical*, same elements and same indices -- so the check is exact table
+The reference is the one that pays for the file. With the basis taken in a fixed
+order -- `{1, x, ..., x^(d-1)}` in one variable, the box of exponent vectors in
+several -- and an element `(a_0..a_(dim-1))` at index `sum(a_j n^j)`, the
+quotient does not merely become *isomorphic* to the ring it generalises: it
+becomes *identical*, same elements and same indices. So the check is exact table
 equality rather than a search for an isomorphism. It was written before the
 generic ring existed, which is why the target is a fixed thing to hit rather than
 one fitted to whatever came out.

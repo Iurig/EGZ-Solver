@@ -6,8 +6,8 @@ A C++ brute-force calculator for arbitrary degree Erdös-Ginzburg-Ziv constants 
  - $𝔽_4$.
  - $\frac{ℤ_2[x]}{x^2}$
  - Products of any two of the above, via `product<R, P>` (e.g. `Z_2xZ_2`).
- - $ℤ_n[x]/(P)$ for any $P$ of degree $\ge 1$, named directly on the command
-   line. See [Runtime rings](#runtime-rings).
+ - $ℤ_n[x_1 \dots x_k]$ modulo one relation per variable, named directly on the
+   command line. See [Runtime rings](#runtime-rings).
 
 `--list-rings` prints the instantiations the binary was built with; see
 [Adding a ring](#adding-a-ring) to expose more.
@@ -63,19 +63,25 @@ written out directly, so you can compute one without recompiling:
 ```sh
 ./build/egz-solver --ring 'Z_2[x]/(x^2+x+1)'
 ./build/egz-solver --ring 'Z_4[x]/(x^2+1)'
-./build/egz-solver --ring Z_2x_by_x2+x+1      # the same ring, no quoting needed
+./build/egz-solver --ring 'Z_2[x,y]/(x^2,y^2)'
+./build/egz-solver --ring Z_2xy_by_x2_and_y2   # the same ring, no quoting needed
 ```
 
-`P` needs degree at least 1 and a leading coefficient invertible mod `n`; a zero
+Each variable needs exactly one relation, in that variable alone. A relation
+needs degree at least 1 and a leading coefficient invertible mod `n`; a zero
 divisor there leaves a ring the solver cannot compute in, and it says so rather
 than guessing. Coefficients may be written with `-`, and `x^2` and `x2` are both
 accepted.
 
-The ring has `n^deg(P)` elements, and that is the number to watch: cost climbs
-steeply with it, and anything past 256 elements is refused as unsearchable.
+A relation tying variables together — `(xy-1)`, `(x^2-y)` — is rejected rather
+than approximated. Those need a Gröbner basis, which this does not have.
 
-The table lands in `EGZ_Z_nx_by_P.tsv`, and that name is itself a valid `--ring`
-argument, so a file name can always be fed back to reproduce its contents.
+The ring has `n^(d1 * ... * dk)` elements, for relation degrees `d1 .. dk`, and
+that is the number to watch: cost climbs steeply with it, and anything past 256
+elements is refused as unsearchable. `Z_2[x,y]/(x^2,y^2)` is already 16.
+
+The table lands in `EGZ_<ring name>.tsv`, and that name is itself a valid
+`--ring` argument, so a file name can always be fed back to reproduce it.
 
 `Z_2[x]/(x^2)` and `Z_2[x]/(x^2+x+1)` are the built-in `Z_2x_by_x2` and `F_4`
 written the other way round. They give identical results, down to byte-identical
@@ -239,9 +245,10 @@ unit. Each header is self-contained and guarded with `#pragma once`.
 
 Rows are left out with `--skip` at run time, so a ring needs no hook for that.
 
-A quotient of $ℤ_n[x]$ needs none of this — see [Runtime rings](#runtime-rings).
-Extending those to several variables means changing `buildBasis()` in
-`quotient.hpp`; the rest of that file is written not to care.
+A quotient of a polynomial ring needs none of this — see
+[Runtime rings](#runtime-rings). Relations mixing variables would mean a Gröbner
+basis in `buildBasis()`; the rest of `quotient.hpp` is written not to care,
+since it only ever asks for the basis and the products of basis monomials.
 
 ## License
 

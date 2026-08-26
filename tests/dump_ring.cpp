@@ -59,8 +59,13 @@ int main(int argc, char **argv) {
       dispatchRing(n, [](auto tag) { dump<typename decltype(tag)::type>(); });
     return 0;
   }
-  if (!dispatchRing(arg, [](auto tag) { dump<typename decltype(tag)::type>(); })) {
-    std::cerr << "unknown ring: " << arg << " (try --list)" << std::endl;
+  std::string error;
+  if (!dispatchRing(
+          arg, [](auto tag) { dump<typename decltype(tag)::type>(); }, &error)) {
+    if (!error.empty())
+      std::cerr << arg << ": " << error << std::endl;
+    else
+      std::cerr << "unknown ring: " << arg << " (try --list)" << std::endl;
     return 2;
   }
   return 0;
