@@ -10,13 +10,12 @@
 #include "rings.hpp"
 #include "sequence.hpp"
 
-using namespace std;
 
 template <typename R>
 class EGZSolver {
 private:
   // One memo table per m; sized from M_MAX() at construction.
-  vector<unordered_map<sequence<R>, R>> memorized_e_m;
+  std::vector<std::unordered_map<sequence<R>, R>> memorized_e_m;
 
 public:
   EGZSolver() : memorized_e_m(M_MAX() + 1) {}
@@ -86,10 +85,10 @@ public:
       if (isCE) {
 #ifdef DEBUG
         if (egz::verbose) {
-          cout << "Found CE of size " << size << " for t = " << t << " and m = " << m << ": ";
+          std::cout << "Found CE of size " << size << " for t = " << t << " and m = " << m << ": ";
           for (int i = 0; i < R::order; i++)
-            cout << prev.count(i) << " ";
-          cout << endl;
+            std::cout << prev.count(i) << " ";
+          std::cout << std::endl;
         }
 #endif
       }
@@ -104,7 +103,7 @@ public:
     // memory rather than fail. T_MAX needs no such guard: it is only the
     // identifier() hash radix, and sequence::operator== compares contents.
     if (m < 0 || m >= (int)memorized_e_m.size()) {
-      cerr << "EGZ: m=" << m << " is outside the compiled bound M_MAX=" << M_MAX() << "; raise --m-max" << endl;
+      std::cerr << "EGZ: m=" << m << " is outside the compiled bound M_MAX=" << M_MAX() << "; raise --m-max" << std::endl;
       exit(2);
     }
     sequence<R> t_choose_m;
@@ -112,7 +111,7 @@ public:
     if (e_m(t_choose_m, m) != 0) {
 #ifdef DEBUG
       if (egz::verbose)
-        cout << "em = " << e_m(t_choose_m, m).value << ", t = " << t << ", m = " << m << endl;
+        std::cout << "em = " << e_m(t_choose_m, m).value << ", t = " << t << ", m = " << m << std::endl;
 #endif
       return 0;
     }
@@ -121,7 +120,7 @@ public:
       l++;
 #ifdef DEBUG
       if (egz::verbose)
-        cout << "testing t = " << t << " and m = " << m << ", l = " << l << endl;
+        std::cout << "testing t = " << t << " and m = " << m << ", l = " << l << std::endl;
 #endif
     }
     return l;

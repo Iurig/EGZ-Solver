@@ -8,7 +8,6 @@
 
 #include "config.hpp"
 
-using namespace std;
 
 template <typename R>
 class sequence {
@@ -17,7 +16,7 @@ private:
 
 public:
   static constexpr int n = R::order;
-  sequence() { c = vector<int>(n); }
+  sequence() { c = std::vector<int>(n); }
   R element() {
     for (int i = n - 1; i >= 0; i--)
       if (c[i] != 0)
@@ -32,7 +31,7 @@ public:
     _size += a;
     c[x.value] += a;
   }
-  size_t size() { return _size; }
+  std::size_t size() { return _size; }
   long long identifier() const {
     long long h = 0;
     long long t = 1;
@@ -56,13 +55,13 @@ public:
   }
   bool empty() { return size() == 0; }
   bool operator<(const sequence<R> &other) const { return c < other.c; }
-  size_t count(const R &x) { return c[x.value]; }
-  vector<int> c;
+  std::size_t count(const R &x) { return c[x.value]; }
+  std::vector<int> c;
   void print() {
     for (int i = 0; i < n; i++) {
-      cout << c[i] << " ";
+      std::cout << c[i] << " ";
     }
-    cout << endl;
+    std::cout << std::endl;
   }
   bool is_Subsequence_of(const sequence<R> &S) {
     for (int i = 0; i < n; i++) {

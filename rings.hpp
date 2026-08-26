@@ -4,7 +4,6 @@
 #include <numeric>
 #include <string>
 
-using namespace std;
 
 // Check this class for prerequisites of children classes
 class ring {
@@ -40,7 +39,7 @@ public:
   bool operator<(const ring &other) { return value < other.value; };
 
   // Ring name
-  string name() { return "ring"; }
+  std::string name() { return "ring"; }
 };
 
 template <int n>
@@ -72,7 +71,7 @@ public:
   bool operator<(const Zn &other) const { return (value < other.value); }
 
   // Ring name
-  static string name() { return "Z_" + to_string(n); }
+  static std::string name() { return "Z_" + std::to_string(n); }
 };
 
 template <int n, int p>
@@ -135,14 +134,14 @@ public:
   }
   Znp print() {
     for (int i = 0; i < p; i++) {
-      cout << expression[i].value << " ";
+      std::cout << expression[i].value << " ";
     }
-    cout << endl;
+    std::cout << std::endl;
     return 0;
   }
 
   // Ring name
-  static string name() { return "Z_" + to_string(n) + "^" + to_string(p); };
+  static std::string name() { return "Z_" + std::to_string(n) + "^" + std::to_string(p); };
 };
 
 class Z_2_over : public ring {
@@ -182,7 +181,7 @@ public:
   Z_2_over operator*(const Z_2_over &other) const { return Z_2_over(prod[value][other.value]); }
 
   // Ring name
-  static string name() { return "Z_2x_by_x2"; }
+  static std::string name() { return "Z_2x_by_x2"; }
 };
 
 class F4 : public ring {
@@ -214,13 +213,13 @@ public:
   F4 operator*(const F4 &other) const { return F4(prod[value][other.value]); }
 
   // Ring name
-  static string name() { return "F_4"; }
+  static std::string name() { return "F_4"; }
 };
 
 template <typename R, typename P>
 class product : public ring {
 public:
-  static constexpr int characteristic = lcm(R::characteristic, P::characteristic), order = R::order * P::order,
+  static constexpr int characteristic = std::lcm(R::characteristic, P::characteristic), order = R::order * P::order,
                        unit = R::unit * P::order + P::unit;
 
   // Constructor
@@ -237,5 +236,5 @@ public:
   }
 
   // Ring name
-  static string name() { return "(" + R::name() + ", " + P::name() + ")"; };
+  static std::string name() { return "(" + R::name() + ", " + P::name() + ")"; };
 };

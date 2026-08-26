@@ -5,10 +5,9 @@
 #include <iostream>
 #include <string>
 
-using namespace std;
 
 // Default directory for the generated tables, relative to the working directory.
-const string DEFAULT_OUTPUT_DIR = "Experimental tables";
+const std::string DEFAULT_OUTPUT_DIR = "Experimental tables";
 
 // Writes to a file only if enabled.
 struct ConditionalFileStream {
