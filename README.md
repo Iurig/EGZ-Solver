@@ -185,9 +185,9 @@ against 375 MiB of `e_m` memo, so the memo is what you actually pay for.
 ### The other search
 
 `--method top-down` selects a second, independent implementation
-(`egz_solver.hpp`). It takes each candidate length `l` in turn and searches for a
-counterexample — a sequence of length `l` with no zero-`e_m` subsequence of
-length `t` — and returns the first `l` that has none.
+(`egz_top_down.hpp`). It takes each candidate length `l` in turn and searches
+for a counterexample — a sequence of length `l` with no zero-`e_m` subsequence
+of length `t` — and returns the first `l` that has none.
 
 It exists because two implementations that agree are worth more than one that
 does not disagree with itself. They share only `sequence` and the ring; the `e_m`
@@ -286,8 +286,8 @@ See [tests/README.md](tests/README.md).
 | File | Contents |
 | --- | --- |
 | `main.cpp` | CLI and the table writer. |
-| `egz_solver.hpp` | The top-down search: `e_m`, counterexample enumeration, `EGZ(t, m)`. |
-| `egz_bottom_up.hpp` | The bottom-up search, an independent second implementation. |
+| `egz_bottom_up.hpp` | The search: `e_m`, the level sweep, `EGZ(t, m)`. |
+| `egz_top_down.hpp` | The other search, an independent second implementation. |
 | `rings.hpp` | Ring implementations (`Zn`, `Znp`, `F4`, `Z_2_over`, `product`). |
 | `quotient.hpp` | Parses and builds the `Z_n[x]/(P)` rings named at run time. |
 | `ring_registry.hpp` | Maps a `--ring` name or spec to its ring. |

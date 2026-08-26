@@ -7,19 +7,16 @@
 #include <vector>
 
 #include "config.hpp"
-#include "egz_solver.hpp"
 #include "sequence.hpp"
 
 #ifndef EGZ_MAX_LEVEL
 #define EGZ_MAX_LEVEL 1600000000ULL
 #endif
 
-// A second way to compute EGZ(t, m), working up from the bottom instead of
-// searching downward for a counterexample.
+// Computes EGZ(t, m) by working up from level t. This is the default search;
+// egz_top_down.hpp holds the other one.
 //
-// EGZSolver asks, for each candidate length l in turn, "is there a sequence of
-// length l with no zero-e_m subsequence of length t?", and enumerates sequences
-// looking for one. This asks the complementary question level by level:
+// The question is asked level by level:
 //
 //   level t      which multisets of size t have e_m = 0
 //   level t+1    which multisets of size t+1 contain one of those
@@ -38,19 +35,19 @@
 // in S - x. So a level is one pass over its multisets, each looking at its own
 // predecessors -- no search, no backtracking.
 //
-// Two things follow from the recurrence, both worth knowing before reading a
-// benchmark against EGZSolver:
+// Two things follow from the recurrence:
 //
 //  * Only *which* e_m are zero matters, never their values. The values are
 //    computed once at level t and never consulted again.
-//  * Every multiset of every level is visited, whereas EGZSolver can stop the
-//    moment it finds one counterexample. The trade is exhaustive-but-flat
-//    against searching-but-deep, and which wins is an empirical question --
-//    hence tests/compare_methods.cpp.
+//  * Every multiset of every level is visited, where the top-down search can
+//    stop the moment it finds one counterexample -- but this one never
+//    re-derives anything, and that turns out to win: see "How the search works"
+//    in README.md for the measurements.
 //
-// This is deliberately a separate implementation, down to its own e_m and its
-// own memo, so that agreement between the two is evidence rather than a
-// tautology. Only `sequence` and the ring are shared.
+// This shares nothing with the top-down search but `sequence` and the ring: the
+// e_m recurrence and the memo below are written separately from the ones there.
+// That duplication is deliberate. Two implementations that agree are evidence;
+// one implementation called twice is not.
 template <typename R>
 class BottomUpEGZSolver {
 private:
@@ -173,9 +170,9 @@ public:
 
   long long lastWork() const { return work; }
 
-  // Memoized e_m results held. Unlike the top-down search this is not where the
-  // memory goes: only level t consults e_m at all, so the memo stops growing
-  // once the sweep starts climbing.
+  // Memoized e_m results held. Unlike the top-down search, this is not where
+  // the memory goes: only level t consults e_m at all, so the memo stops
+  // growing once the sweep starts climbing.
   size_t memoEntries() const {
     size_t total = 0;
     for (const auto &table : memorized_e_m)
@@ -196,11 +193,11 @@ public:
   unsigned long long emCells() const { return em_cells; }
   unsigned long long climbCells() const { return climb_cells; }
 
-  // Same contract as EGZSolver::EGZ: 0 when no EGZ constant exists, and
+  // Same contract as the top-down search: 0 when no EGZ constant exists, and
   // EGZ_ABANDONED when --max-work or the level cap stopped it early.
   //
-  // A work unit here is one multiset visited, which is not the unit EGZSolver
-  // charges, so the same --max-work means different things to the two.
+  // A work unit here is one multiset visited, which is not the unit the
+  // top-down search charges, so --max-work means different things to the two.
   int EGZ(int t, int m) {
     work = 0;
     aborted = false;
@@ -212,9 +209,9 @@ public:
     if (t < 1)
       return 0;
 
-    // Same first question EGZSolver asks. If e_m of t copies of 1 is not zero
-    // then 1, 1, 1, ... is a counterexample of every length, so no constant
-    // exists -- and the level loop below would never terminate.
+    // The same first question the top-down search asks. If e_m of t copies of
+    // 1 is not zero then 1, 1, 1, ... is a counterexample of every length, so
+    // no constant exists -- and the level loop below would never terminate.
     sequence<R> t_ones;
     t_ones.insert(R::unit, t);
     R em = e_m(t_ones, m);

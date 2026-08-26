@@ -15,7 +15,7 @@
 // Every other ring here is a type, fixed when the binary is compiled. This one
 // is chosen from a string, so its order, characteristic and operation tables
 // are ordinary statics rather than `constexpr`. Nothing downstream minds:
-// sequence and EGZSolver read R::order as a value, never in a constant
+// sequence and TopDownEGZSolver read R::order as a value, never in a constant
 // expression.
 //
 // One ring is configured at a time, by configureQuotient(). That matches how

@@ -5,7 +5,7 @@
 //
 // The two are independent down to their own e_m and their own memo, so an
 // agreement is evidence and a disagreement localises a bug to one of them.
-// EGZSolver searches downward for a counterexample at each candidate length;
+// TopDownEGZSolver searches downward for a counterexample at each candidate length;
 // BottomUpEGZSolver sweeps every multiset level by level. See the comment at
 // the top of egz_bottom_up.hpp.
 //
@@ -19,7 +19,7 @@
 #include <vector>
 
 #include "egz_bottom_up.hpp"
-#include "egz_solver.hpp"
+#include "egz_top_down.hpp"
 #include "ring_registry.hpp"
 
 using Clock = std::chrono::steady_clock;
@@ -41,7 +41,7 @@ static std::string cellText(int v) {
 
 template <typename R>
 static int compare(int m_min, int m_max, int t_max, double budget_ms) {
-  EGZSolver<R> top;
+  TopDownEGZSolver<R> top;
   BottomUpEGZSolver<R> bottom;
   Totals tot;
 

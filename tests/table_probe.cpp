@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "egz_solver.hpp"
+#include "egz_top_down.hpp"
 #include "ring_registry.hpp"
 
 struct Cell {
@@ -59,7 +59,7 @@ static std::vector<Cell> readTable(const std::string &path) {
 
 template <typename R>
 void probe(const std::vector<Cell> &cells, double budget_ms) {
-  EGZSolver<R> solver;
+  TopDownEGZSolver<R> solver;
   int last_m = -1;
   bool row_over_budget = false;
   for (const Cell &c : cells) {

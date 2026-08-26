@@ -202,7 +202,7 @@ public:
                        unit = R::unit * P::order + P::unit;
 
   // Constructor. Takes an element index in [0, order), like every other ring
-  // here: sequence and EGZSolver identify elements that way and use the value
+  // here: sequence and TopDownEGZSolver identify elements that way and use the value
   // to index storage, so a constructor taking a component pair would put
   // elements out of range. Components are index / P::order and index % P::order.
   product(int index = 0) : ring(index) {}

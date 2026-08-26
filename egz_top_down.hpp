@@ -10,13 +10,24 @@
 #include "rings.hpp"
 #include "sequence.hpp"
 
-
-// Returned by EGZ(t, m) when the work budget ran out before an answer was
-// reached. Distinct from 0, which means no EGZ constant exists.
-constexpr int EGZ_ABANDONED = -1;
-
+// Computes EGZ(t, m) by taking each candidate length l in turn and searching
+// for a counterexample: a sequence of length l with no zero-e_m subsequence of
+// length t. The first l with none is the answer.
+//
+// This is not the default -- egz_bottom_up.hpp is, and is faster on every ring
+// measured, because each length here starts a fresh search over ground the
+// previous one covered. Two things keep this one:
+//
+//  * It never holds a level of multisets, so it has no memory ceiling.
+//  * It is an independent implementation. It shares nothing with the bottom-up
+//    search but `sequence` and the ring, and the suite holds the two to
+//    producing identical tables. Their agreement is the strongest evidence the
+//    published numbers are right, and it only means something because neither
+//    is written in terms of the other.
+//
+// See "How the search works" in README.md for the comparison.
 template <typename R>
-class EGZSolver {
+class TopDownEGZSolver {
 private:
   // One memo table per m; sized from M_MAX() at construction.
   std::vector<std::unordered_map<sequence<R>, R>> memorized_e_m;
@@ -38,7 +49,7 @@ private:
   }
 
 public:
-  EGZSolver() : memorized_e_m(M_MAX() + 1) {}
+  TopDownEGZSolver() : memorized_e_m(M_MAX() + 1) {}
 
   // Work spent on the most recent EGZ(t, m).
   long long lastWork() const { return work; }

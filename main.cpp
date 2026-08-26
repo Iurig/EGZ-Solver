@@ -6,7 +6,7 @@
 #include "conditional_file_stream.hpp"
 #include "config.hpp"
 #include "egz_bottom_up.hpp"
-#include "egz_solver.hpp"
+#include "egz_top_down.hpp"
 #include "ring_registry.hpp"
 #include "skip_rule.hpp"
 
@@ -19,7 +19,7 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
   string output_file_name = "EGZ_" + R::name() + ".tsv";
   ConditionalFileStream output_file(output_file_name, to_file, out_dir);
 
-  // Either EGZSolver<R> or BottomUpEGZSolver<R>; see --method. They are
+  // Either TopDownEGZSolver<R> or BottomUpEGZSolver<R>; see --method. They are
   // independent implementations that agree, not one wrapping the other.
   Solver s;
 
@@ -229,7 +229,7 @@ int main(int argc, char **argv) {
     return 2;
   }
 
-  // Must happen before any EGZSolver is built: solvers size their memo tables
+  // Must happen before any TopDownEGZSolver is built: solvers size their memo tables
   // from M_MAX() at construction.
   setSearchBounds(m_max, t_max);
   setVerbose(!quiet);
@@ -253,7 +253,7 @@ int main(int argc, char **argv) {
         if (bottom_up)
       findEGZs<R, BottomUpEGZSolver<R>>(m_max, m_min, out_dir, to_file, quiet, skip);
     else
-      findEGZs<R, EGZSolver<R>>(m_max, m_min, out_dir, to_file, quiet, skip);
+      findEGZs<R, TopDownEGZSolver<R>>(m_max, m_min, out_dir, to_file, quiet, skip);
       },
       &ring_error);
   if (!known) {

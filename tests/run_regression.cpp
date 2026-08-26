@@ -14,7 +14,7 @@
 #include <vector>
 
 #include "egz_bottom_up.hpp"
-#include "egz_solver.hpp"
+#include "egz_top_down.hpp"
 #include "ring_registry.hpp"
 
 struct Case {
@@ -122,5 +122,5 @@ int main(int argc, char **argv) {
     byRing[c.ring].push_back(c);
 
   std::cout << "replaying with the " << (bottomUp ? "bottom-up" : "top-down") << " search" << std::endl;
-  return bottomUp ? replay<BottomUpEGZSolver>(byRing, cases.size()) : replay<EGZSolver>(byRing, cases.size());
+  return bottomUp ? replay<BottomUpEGZSolver>(byRing, cases.size()) : replay<TopDownEGZSolver>(byRing, cases.size());
 }
