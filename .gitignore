@@ -12,3 +12,6 @@ build/
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Thesis sources, kept locally and never published
+Tese_EGZ/
