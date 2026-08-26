@@ -21,7 +21,7 @@ ring<TAB>m<TAB>t<TAB>expected_EGZ
 `expected_EGZ` is the absolute constant, **not** the `EGZ - t` value stored in
 the tables — the conversion happens when the fixture is generated.
 
-164 cases cover all nine tables and run in about two seconds. They were selected
+176 cases cover all nine tables and run in about two seconds. They were selected
 for speed: every case took under 25 ms when generated, except for `Z_7` and
 `Z_8`, whose cheapest cells are slower and are included anyway so that no ring
 goes uncovered.
@@ -31,7 +31,7 @@ goes uncovered.
 The fixture reaches `m = 37`, well past the default `M_MAX` of 20, so
 `run_regression` is compiled with `-DEGZ_M_MAX=60 -DEGZ_T_MAX=300`. Cases
 outside whatever bounds the binary was built with are reported as `SKIP` rather
-than run, so building with the defaults yields 88 passed / 76 skipped instead of
+than run, so building with the defaults yields 100 passed / 76 skipped instead of
 a failure.
 
 ## Regenerating the fixture
@@ -77,6 +77,50 @@ budget never solves fewer cells. Runs under `ctest` as `max_work`.
 python tests/test_max_work.py build/egz-solver
 ```
 
+## Ring structure
+
+`test_rings.py` checks the rings themselves rather than the search. It runs
+under `ctest` as `rings`.
+
+```sh
+python tests/test_rings.py build/dump_ring
+```
+
+`dump_ring` prints a ring's order, characteristic, unit and full operation
+tables; `ring_goldens.tsv` holds a dump of every registered ring. Four things
+are checked:
+
+ - **Axioms.** Every registered ring is a commutative unit ring, verified over
+   all `order^3` triples. A wrong multiplication table does not crash the
+   solver, it just yields wrong EGZ constants, so nothing else would catch it.
+ - **Stability.** Every ring still matches its golden. The published tables were
+   computed with these exact operation tables, so a silent change to one
+   invalidates data already committed.
+ - **The reference quotient.** A short, independent implementation of
+   `Z_n[x]/(P)` in the test file reproduces the goldens of `Z_2`, `Z_3`, `Z_5`,
+   `Z_2x_by_x2` and `F_4` exactly.
+ - **The implementation, once it exists.** Each entry in `EXPECTED` is asked for
+   by `--ring` spec. Specs the binary does not accept yet report `PEND`.
+
+The third point is the one that pays for the file. `Z_n[x]/(P)` with the basis
+`{1, x, ..., x^(d-1)}` and an element `(a_0..a_(d-1))` at index `sum(a_i n^i)`
+does not merely become *isomorphic* to the ring it generalises -- it becomes
+*identical*, same elements and same indices -- so the check is exact table
+equality rather than a search for an isomorphism. Writing it before the generic
+ring exists fixes the target in advance instead of fitting it afterwards.
+
+It discriminates: the three order-4 characteristic-2 rings in the registry
+(`F_4`, `Z_2x_by_x2`, `Z_2^2`) are told apart from each other, and a wrong
+modulus such as `x^2+1` in place of `x^2+x+1` is rejected as not even
+isomorphic. When two rings differ but *are* isomorphic, the failure says so,
+since that means the basis ordering is wrong rather than the ring.
+
+Regenerate the goldens after deliberately changing a ring:
+
+```sh
+./build/dump_ring --all > tests/ring_goldens.tsv
+```
+
 ## Verifying against the published theorems
 
 `verify_against_thesis.py` checks the committed tables against the results
@@ -95,7 +139,7 @@ fails. What it covers:
 | Check | Kind | Cells |
 | --- | --- | --- |
 | Layout: header labels, uniform row width | structural | 9 tables |
-| Blank iff `char(R)` does not divide `C(t,m)` | structural | 12,066 |
+| Blank iff computed and `char(R)` does not divide `C(t,m)` | structural | 18,389 |
 | Thm 3.1 — `Z_3`, `m = 3^k` | exact | 62 |
 | Thm 3.4 — `Z_4`, `m = 2^k` | exact | 48 |
 | Thm 3.5 — `Z_4`, `m` not a power of 2 | exact | 818 |

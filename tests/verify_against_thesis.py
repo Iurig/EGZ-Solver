@@ -9,9 +9,6 @@ the .tsv files -- no PDF, no build, no third-party packages.
     python tests/verify_against_thesis.py --solver build/egz-solver
 
 Exits 0 if every check passes, 1 otherwise.
-
-Two of the checks depend on readings that were ambiguous in the source PDF and
-were pinned down separately; both are noted at their definitions below.
 """
 
 import argparse
@@ -49,8 +46,12 @@ RINGS = {
     # 4-element rings of characteristic 2 -- not Z_4.
     "EGZ_Z_2^2.tsv": dict(order=4, char=2, cyclic=None, t_limit=FLAT),
     "EGZ_F_4.tsv": dict(order=4, char=2, cyclic=None, t_limit=FLAT),
-    "EGZ_Z_2x_by_x2.tsv": dict(order=4, char=2, cyclic=None,
-                               t_limit=lambda m: smallest_power_bigger_than(2, m) + m + 1),
+    "EGZ_Z_2x_by_x2.tsv": dict(
+        order=4,
+        char=2,
+        cyclic=None,
+        t_limit=lambda m: smallest_power_bigger_than(2, m) + m + 1,
+    ),
 }
 
 
@@ -88,7 +89,9 @@ def load(path):
         if not f or not f[0]:
             continue
         # "?" marks a cell abandoned under --max-work: no value to check.
-        rows[int(f[0])] = {t: int(f[t]) for t in range(1, len(f)) if f[t] and f[t] != ABANDONED}
+        rows[int(f[0])] = {
+            t: int(f[t]) for t in range(1, len(f)) if f[t] and f[t] != ABANDONED
+        }
     return rows
 
 
@@ -126,7 +129,11 @@ def check_shape(tables, rep):
             bad.append(f"{name}: header labels not 0..n")
         if len(set(counts)) != 1:
             bad.append(f"{name}: ragged rows {sorted(set(counts))}")
-    rep.add("layout (header labels, uniform width)", not bad, "; ".join(bad) or f"{len(tables)} tables")
+    rep.add(
+        "layout (header labels, uniform width)",
+        not bad,
+        "; ".join(bad) or f"{len(tables)} tables",
+    )
 
 
 def check_blank_rule(tables, rep):
@@ -160,8 +167,12 @@ def check_blank_rule(tables, rep):
                     table_bad += 1
         if table_bad:
             detail.append(f"{name}:{table_bad}")
-    rep.add("blank iff computed and char(R) does not divide C(t,m)", bad == 0,
-            f"{checked} cells, {bad} inconsistent" + (" [" + ", ".join(detail) + "]" if detail else ""))
+    rep.add(
+        "blank iff computed and char(R) does not divide C(t,m)",
+        bad == 0,
+        f"{checked} cells, {bad} inconsistent"
+        + (" [" + ", ".join(detail) + "]" if detail else ""),
+    )
 
 
 # --- exact results -----------------------------------------------------------
@@ -209,7 +220,11 @@ def check_theorem_3_3(tables, rep):
                 ok += 1
             else:
                 bad += 1
-    rep.add("Thm 3.3  Z_2^2, 2|t or m=2^r", bad == 0, f"{ok} cells confirmed, {bad} disagree ({outside} outside domain)")
+    rep.add(
+        "Thm 3.3  Z_2^2, 2|t or m=2^r",
+        bad == 0,
+        f"{ok} cells confirmed, {bad} disagree ({outside} outside domain)",
+    )
 
 
 def check_theorem_3_5(tables, rep):
@@ -251,8 +266,10 @@ def check_theorem_3_5(tables, rep):
                     fails.append((m, t, v, pred, r, l, d))
     detail = f"{ok} cells confirmed, {bad} disagree"
     if fails:
-        detail += "  e.g. " + "; ".join(f"m={m} t={t} got {v} want {p} (r={r},l={L},d={d})"
-                                        for m, t, v, p, r, L, d in fails[:3])
+        detail += "  e.g. " + "; ".join(
+            f"m={m} t={t} got {v} want {p} (r={r},l={L},d={d})"
+            for m, t, v, p, r, L, d in fails[:3]
+        )
     rep.add("Thm 3.5  Z_4, m not a power of 2", bad == 0, detail)
 
 
@@ -261,8 +278,13 @@ def check_propositions_4_1_4_2(tables, rep):
 
     Agreement is mutual consistency, not independent confirmation.
     """
-    cases = [("EGZ_Z_3.tsv", 3, 1), ("EGZ_Z_5.tsv", 5, 1), ("EGZ_Z_7.tsv", 7, 1),
-             ("EGZ_Z_4.tsv", 2, 2), ("EGZ_Z_8.tsv", 2, 3)]
+    cases = [
+        ("EGZ_Z_3.tsv", 3, 1),
+        ("EGZ_Z_5.tsv", 5, 1),
+        ("EGZ_Z_7.tsv", 7, 1),
+        ("EGZ_Z_4.tsv", 2, 2),
+        ("EGZ_Z_8.tsv", 2, 3),
+    ]
     ok = bad = 0
     lookup = dict(tables)
     for name, p, n in cases:
@@ -279,7 +301,11 @@ def check_propositions_4_1_4_2(tables, rep):
                 else:
                     bad += 1
             k += 1
-    rep.add("Prop 4.1/4.2  m = p^k  (conjecture)", bad == 0, f"{ok} cells consistent, {bad} disagree")
+    rep.add(
+        "Prop 4.1/4.2  m = p^k  (conjecture)",
+        bad == 0,
+        f"{ok} cells consistent, {bad} disagree",
+    )
 
 
 # --- upper bounds ------------------------------------------------------------
@@ -322,7 +348,9 @@ def check_theorem_3_8(tables, rep):
                 checked += 1
                 if v > bound_excess:
                     viol += 1
-    rep.add("Thm 3.8  bound, prime char", viol == 0, f"{checked} cells, {viol} violations")
+    rep.add(
+        "Thm 3.8  bound, prime char", viol == 0, f"{checked} cells, {viol} violations"
+    )
 
 
 # --- solver-based ------------------------------------------------------------
@@ -344,16 +372,31 @@ def check_theorem_2_2(solver, rep, m_max=20, t_max=30):
         rep.add("Thm 2.2  Z_2, all m (solver)", False, f"no such binary: {solver}")
         return
     with tempfile.TemporaryDirectory() as tmp:
-        cmd = [solver, "--ring", "Z_2", "--m-max", str(m_max), "--t-max", str(t_max),
-               "--quiet", "--out-dir", tmp]
+        cmd = [
+            solver,
+            "--ring",
+            "Z_2",
+            "--m-max",
+            str(m_max),
+            "--t-max",
+            str(t_max),
+            "--quiet",
+            "--out-dir",
+            tmp,
+        ]
         try:
             proc = subprocess.run(cmd, capture_output=True, timeout=600)
         except (OSError, subprocess.TimeoutExpired) as exc:
-            rep.add("Thm 2.2  Z_2, all m (solver)", False, f"could not run solver: {exc}")
+            rep.add(
+                "Thm 2.2  Z_2, all m (solver)", False, f"could not run solver: {exc}"
+            )
             return
         if proc.returncode != 0:
-            rep.add("Thm 2.2  Z_2, all m (solver)", False,
-                    f"solver exited {proc.returncode}: {proc.stderr.decode(errors='replace').strip()[:120]}")
+            rep.add(
+                "Thm 2.2  Z_2, all m (solver)",
+                False,
+                f"solver exited {proc.returncode}: {proc.stderr.decode(errors='replace').strip()[:120]}",
+            )
             return
         path = os.path.join(tmp, "EGZ_Z_2.tsv")
         if not os.path.exists(path):
@@ -368,15 +411,26 @@ def check_theorem_2_2(solver, rep, m_max=20, t_max=30):
                 ok += 1
             else:
                 bad += 1
-    rep.add("Thm 2.2  Z_2, all m (solver)", bad == 0 and ok > 0, f"{ok} cells confirmed, {bad} disagree")
+    rep.add(
+        "Thm 2.2  Z_2, all m (solver)",
+        bad == 0 and ok > 0,
+        f"{ok} cells confirmed, {bad} disagree",
+    )
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     here = os.path.dirname(os.path.abspath(__file__))
-    ap.add_argument("--tables", default=os.path.join(os.path.dirname(here), "Experimental tables"),
-                    help="directory holding the EGZ_*.tsv tables")
-    ap.add_argument("--solver", help="path to the egz-solver binary; enables the Theorem 2.2 check")
+    ap.add_argument(
+        "--tables",
+        default=os.path.join(os.path.dirname(here), "Experimental tables"),
+        help="directory holding the EGZ_*.tsv tables",
+    )
+    ap.add_argument(
+        "--solver", help="path to the egz-solver binary; enables the Theorem 2.2 check"
+    )
     args = ap.parse_args()
 
     tables = []
@@ -387,7 +441,9 @@ def main():
     if not tables:
         print(f"no tables found in {args.tables}", file=sys.stderr)
         return 2
-    print(f"Verifying {len(tables)} tables in {args.tables} against the thesis results.")
+    print(
+        f"Verifying {len(tables)} tables in {args.tables} against the thesis results."
+    )
 
     rep = Report()
     check_shape(tables, rep)
