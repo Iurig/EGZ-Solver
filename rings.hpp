@@ -222,19 +222,28 @@ public:
   static constexpr int characteristic = std::lcm(R::characteristic, P::characteristic), order = R::order * P::order,
                        unit = R::unit * P::order + P::unit;
 
-  // Constructor
-  product(int r = 0, int p = 0) : ring(r * P::order + p) {}
+  // Constructor. Takes an element index in [0, order), like every other ring
+  // here: sequence and EGZSolver identify elements that way and use the value
+  // to index storage, so a constructor taking a component pair would put
+  // elements out of range. Components are index / P::order and index % P::order.
+  product(int index = 0) : ring(index) {}
+
+  static product fromParts(int r, int p) { return product(r * P::order + p); }
+
+  R first() const { return R(value / P::order); }
+  P second() const { return P(value % P::order); }
 
   // Operator +
   product operator+(const product &other) const {
-    return product((R(value / P::order) + R(other.value / P::order)).value, (P(value % P::order) + P(other.value % P::order)).value);
+    return fromParts((first() + other.first()).value, (second() + other.second()).value);
   }
 
   // Operator *
   product operator*(const product &other) const {
-    return product((R(value / P::order) * R(other.value / P::order)).value, (P(value % P::order) * P(other.value % P::order)).value);
+    return fromParts((first() * other.first()).value, (second() * other.second()).value);
   }
 
-  // Ring name
-  static std::string name() { return "(" + R::name() + ", " + P::name() + ")"; };
+  // Ring name. Kept free of spaces and brackets: it becomes part of the output
+  // file name, EGZ_<name>.tsv.
+  static std::string name() { return R::name() + "x" + P::name(); };
 };

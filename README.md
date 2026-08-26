@@ -5,7 +5,7 @@ A C++ brute-force calculator for arbitrary degree Erdös-Ginzburg-Ziv constants 
  - $ℤ_n^m$, for any natural $n$ and $m$.
  - $𝔽_4$.
  - $\frac{ℤ_2\[x\]}{x^2}$
- - Products of any two of the above, via `product<R, P>`.
+ - Products of any two of the above, via `product<R, P>` (e.g. `Z_2xZ_2`).
 
 `--list-rings` prints the instantiations the binary was built with; see
 [Adding a ring](#adding-a-ring) to expose more.
