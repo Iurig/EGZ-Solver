@@ -28,9 +28,16 @@ static double msSince(Clock::time_point start) {
 }
 
 struct Totals {
-  int agree = 0, disagree = 0, oneSided = 0;
+  int agree = 0, disagree = 0, oneSided = 0, abandoned = 0;
   double topMs = 0, bottomMs = 0;
 };
+
+// A cell either method gave up on says nothing about the other, so it must not
+// be counted as a disagreement -- which is exactly what a bare == would do,
+// since EGZ_ABANDONED is just another int.
+static std::string cellText(int v) {
+  return v == EGZ_ABANDONED ? std::string("?") : std::to_string(v);
+}
 
 template <typename R>
 static int compare(int m_min, int m_max, int t_max, double budget_ms) {
@@ -66,6 +73,11 @@ static int compare(int m_min, int m_max, int t_max, double budget_ms) {
       if (!ranTop || !ranBottom) {
         verdict = "ONE-SIDED";
         tot.oneSided++;
+      } else if (a == EGZ_ABANDONED || b == EGZ_ABANDONED) {
+        // Which side hit its ceiling is the interesting part: this is where the
+        // two methods stop being interchangeable.
+        verdict = (a == EGZ_ABANDONED) ? "ABANDONED-top" : "ABANDONED-bottom";
+        tot.abandoned++;
       } else if (a == b) {
         verdict = "agree";
         tot.agree++;
@@ -75,14 +87,14 @@ static int compare(int m_min, int m_max, int t_max, double budget_ms) {
       }
       tot.topMs += ta;
       tot.bottomMs += tb;
-      std::cout << m << "\t" << t << "\t" << (ranTop ? std::to_string(a) : "-") << "\t"
-                << (ranBottom ? std::to_string(b) : "-") << "\t" << (long)ta << "\t" << (long)tb << "\t" << verdict
-                << std::endl;
+      std::cout << m << "\t" << t << "\t" << (ranTop ? cellText(a) : "-") << "\t" << (ranBottom ? cellText(b) : "-")
+                << "\t" << (long)ta << "\t" << (long)tb << "\t" << verdict << std::endl;
     }
   }
 
-  std::cout << "\n" << tot.agree << " agree, " << tot.disagree << " disagree, " << tot.oneSided << " one-sided"
-            << std::endl;
+  std::cout << "\n"
+            << tot.agree << " agree, " << tot.disagree << " disagree, " << tot.oneSided << " one-sided, "
+            << tot.abandoned << " abandoned by one method" << std::endl;
   std::cout << "time    top-down " << (long)tot.topMs << " ms, bottom-up " << (long)tot.bottomMs << " ms" << std::endl;
 
   // Memory, in the terms each method actually spends it. Both accumulate a
@@ -99,6 +111,16 @@ static int compare(int m_min, int m_max, int t_max, double budget_ms) {
             << bottomMemo << " entries (~" << (bottomMemo * entryBytes >> 10) << " KiB)" << std::endl;
   std::cout << "levels  top-down none, bottom-up peak " << peak << " multisets (" << (peak / 4 >> 10) << " KiB for the "
             << "two live levels)" << std::endl;
+
+  // Which half of the bottom-up search the time goes to. Level t evaluates e_m
+  // on every multiset of that size; every level above it is pure set
+  // arithmetic over the level below.
+  const double em = bottom.emMs(), climb = bottom.climbMs();
+  const double total = em + climb;
+  std::cout << "split   bottom-up e_m at level t " << (long)em << " ms over " << bottom.emCells() << " multisets ("
+            << (total > 0 ? (long)(100 * em / total) : 0) << "%), climbing " << (long)climb << " ms over "
+            << bottom.climbCells() << " multisets (" << (total > 0 ? (long)(100 * climb / total) : 0) << "%)"
+            << std::endl;
   if (tot.agree == 0) {
     // Otherwise a budget so tight that nothing finished on both sides would
     // report success without having compared anything.

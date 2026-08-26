@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <unordered_map>
 #include <vector>
@@ -8,6 +9,10 @@
 #include "config.hpp"
 #include "egz_solver.hpp"
 #include "sequence.hpp"
+
+#ifndef EGZ_MAX_LEVEL
+#define EGZ_MAX_LEVEL 1600000000ULL
+#endif
 
 // A second way to compute EGZ(t, m), working up from the bottom instead of
 // searching downward for a counterexample.
@@ -54,6 +59,13 @@ private:
   long long work = 0;
   bool aborted = false;
   unsigned long long peak_level = 0;
+
+  // Split of the work between the two halves of the algorithm, accumulated over
+  // the solver's lifetime. The question they answer -- is the cost in finding
+  // which e_m vanish, or in climbing the levels afterwards? -- decides where
+  // any optimisation should go, and the answer is not obvious from the code.
+  double em_ms = 0, climb_ms = 0;
+  unsigned long long em_cells = 0, climb_cells = 0;
 
   // Saturating Pascal's triangle. Saturating rather than wrapping matters: a
   // wrapped binomial would produce a plausible-looking rank pointing at the
@@ -146,10 +158,16 @@ private:
   }
 
 public:
-  // Largest level this will hold in memory, as a multiset count. Two levels are
-  // live at once, one bit each, so this is a handful of megabytes; the point is
-  // to abandon a hopeless (t, m) rather than to die allocating.
-  static constexpr unsigned long long MAX_LEVEL_SIZE = 40000000ULL;
+  // Largest level this will hold, as a multiset count. Two levels are live at
+  // once at one bit each, so the default is about 200 MB of levels.
+  //
+  // That is deliberately generous. The obvious guess is that the level sweep is
+  // what costs memory, but measurement says otherwise: on a Z_7 sweep the
+  // levels came to 796 KiB against 375 MiB of e_m memo. Levels only overtake
+  // the memo on a large ring with a large answer, and a cap tight enough to
+  // feel safe just abandons cells this could have done. Override with
+  // -DEGZ_MAX_LEVEL= to trade memory for reach.
+  static constexpr unsigned long long MAX_LEVEL_SIZE = EGZ_MAX_LEVEL;
 
   BottomUpEGZSolver() : memorized_e_m(M_MAX() + 1) {}
 
@@ -170,6 +188,13 @@ public:
   // peakLevel() / 4 bytes. This is the cost the top-down search does not pay,
   // and the reason this one has a ceiling.
   unsigned long long peakLevel() const { return peak_level; }
+
+  // Where the time goes: level t, deciding which e_m vanish, against every
+  // level above it. See the note on em_ms above.
+  double emMs() const { return em_ms; }
+  double climbMs() const { return climb_ms; }
+  unsigned long long emCells() const { return em_cells; }
+  unsigned long long climbCells() const { return climb_cells; }
 
   // Same contract as EGZSolver::EGZ: 0 when no EGZ constant exists, and
   // EGZ_ABANDONED when --max-work or the level cap stopped it early.
@@ -211,6 +236,7 @@ public:
     // Level t: covered means e_m is zero. This is the only place values are
     // looked at; everything above is pure set arithmetic.
     peak_level = std::max(peak_level, levelSize(t));
+    std::chrono::steady_clock::time_point em_start = std::chrono::steady_clock::now();
     std::vector<bool> cur((size_t)levelSize(t), false);
     std::vector<int> c;
     firstComposition(c, k, t);
@@ -226,12 +252,15 @@ public:
         cur[idx] = true;
       idx++;
     } while (nextComposition(c, k));
+    em_cells += idx;
+    em_ms += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - em_start).count();
     if (aborted)
       return EGZ_ABANDONED;
 
     for (int l = t + 1; l <= maxLevel; l++) {
       if (levelSize(l) > MAX_LEVEL_SIZE)
         return EGZ_ABANDONED;
+      std::chrono::steady_clock::time_point climb_start = std::chrono::steady_clock::now();
       peak_level = std::max(peak_level, levelSize(l));
       std::vector<bool> next((size_t)levelSize(l), false);
       unsigned long long coveredCount = 0;
@@ -254,6 +283,8 @@ public:
         }
         idx++;
       } while (nextComposition(c, k));
+      climb_cells += idx;
+      climb_ms += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - climb_start).count();
 
 #ifdef DEBUG
       if (egz::verbose)

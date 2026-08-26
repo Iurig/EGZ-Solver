@@ -165,9 +165,15 @@ cmake --build build --target compare_methods
 The arguments are the ring, `m-min`, `m-max`, `t-max`, and an optional per-cell
 budget in milliseconds; once a cell exceeds it, that method stops for the rest of
 the row, since cost grows with `t`. Cells only one method finished are reported
-as one-sided and not counted as agreements. It prints a row per cell and then
-totals for time, memo size and peak level size, which are the three numbers the
-two methods trade off against each other.
+as one-sided, and a cell either method gave up on is reported as abandoned --
+neither counts as an agreement, and neither is a disagreement, which a bare
+comparison against `EGZ_ABANDONED` would have called one.
+
+Per run it prints a row per cell and then four totals: time, memo size, peak
+level size, and the split of the bottom-up time between deciding which `e_m`
+vanish and climbing the levels above. That last line is the one to read before
+optimising anything -- it is 61-72% `e_m` on every ring measured, even though
+the climb visits about ten times as many multisets.
 
 ## Verifying against the published theorems
 

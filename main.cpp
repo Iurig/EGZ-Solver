@@ -69,9 +69,17 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
     }
   }
 
-  if (abandoned > 0)
-    cerr << "abandoned " << abandoned << " cell" << (abandoned == 1 ? "" : "s") << " at --max-work " << workBudget()
-         << "; they are written as ?" << endl;
+  if (abandoned > 0) {
+    // The budget is not the only thing that can abandon a cell: the bottom-up
+    // search also gives up on a level too large to hold. Saying "--max-work 0"
+    // when no budget was set sends the reader after the wrong knob.
+    cerr << "abandoned " << abandoned << " cell" << (abandoned == 1 ? "" : "s");
+    if (workBudget() > 0)
+      cerr << " at --max-work " << workBudget();
+    else
+      cerr << " (no --max-work set, so these hit an internal limit -- see \"Two searches\" in README.md)";
+    cerr << "; they are written as ?" << endl;
+  }
   if (!skipped.empty()) {
     cerr << "skipped " << skipped.size() << " row" << (skipped.size() == 1 ? "" : "s") << ", m =";
     for (int m : skipped)

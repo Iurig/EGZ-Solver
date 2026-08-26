@@ -175,6 +175,12 @@ when `S - x` is covered for some `x` in it — no search and no backtracking.
 Only *which* `e_m` are zero ever matters to it: the values are computed once at
 level `t` and never looked at again.
 
+That first step is also where its time goes. Deciding which `e_m` vanish takes
+61–72% of the total across the rings measured, despite touching roughly a tenth
+as many multisets as the climb above it — a multiset costs around 270 ns at
+level `t` against 13 ns on the way up. The climb is nearly free; the `e_m`
+evaluations are the bottleneck, and they are the part worth optimising.
+
 The trade is that bottom-up visits every multiset of every level, where top-down
 can stop early — but it never re-derives anything, and top-down re-derives a
 great deal, since each candidate length starts a fresh search over ground the
@@ -208,13 +214,23 @@ multiset of size `t` rather than only the ones a search happens to reach. The
 levels it additionally holds are two at a time at one bit per multiset: **796 KiB
 against 375 MiB** on `Z_7`. The sweep is the cheap part.
 
-That level term is the one with a ceiling on it, though. A level of size `l` over
+The level term is still the one with a ceiling, though. A level of size `l` over
 a ring of order `k` holds `C(l + k - 1, k - 1)` multisets, growing fast in both,
-so a large enough ring with a large enough answer eventually becomes
-level-dominated rather than memo-dominated. Bottom-up gives up and returns `?`
-past a cap rather than trying to allocate; top-down has no such ceiling. Nothing
-measured so far comes near it, and no case has yet been found where top-down
-wins on either axis.
+so a large enough ring with a large enough answer does eventually become
+level-dominated. Past `EGZ_MAX_LEVEL` bottom-up returns `?` rather than trying
+to allocate; top-down has no such ceiling.
+
+That cap is worth knowing about, because setting it too tight throws away cells
+the method could otherwise do. `EGZ(12, Z_12, 1)` is the classical
+Erdős-Ginzburg-Ziv case, answer `2n - 1 = 23`. Its top level holds 548 million
+multisets, so a 40M cap abandons it in 3 seconds while a cap that admits it
+solves it in **17.5 s using 282 MB** — and top-down, on the same cell, reaches
+`l = 23` quickly but had not finished proving there is no counterexample there
+after two minutes. The default cap is set high for that reason; lower it with
+`-DEGZ_MAX_LEVEL=` if the memory matters more than the reach.
+
+So the honest summary is that bottom-up won every cell where both finished, and
+the one cell found where it gives up is one top-down could not do either.
 
 Neither is a wrapper around the other: they have separate `e_m` implementations
 and separate memos, sharing only `sequence` and the ring. That is what makes
