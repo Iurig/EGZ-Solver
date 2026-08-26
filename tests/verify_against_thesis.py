@@ -21,15 +21,12 @@ import tempfile
 from math import comb
 
 # --- ring metadata -----------------------------------------------------------
-# order = number of elements, char = characteristic. Both matter: Theorem 3.8 is
-# stated in terms of them, and within the computed region a cell is non-blank
-# exactly when the characteristic divides C(t, m).
-#
-# `t_limit` is the exclusive upper bound on t the table was generated with, as a
-# function of m. Most tables used a flat bound (the full header width), but
-# EGZ_Z_2x_by_x2.tsv was produced with the variable form that survives commented
-# out in config.hpp: smallestPowerBiggerThan(2, m) + m + 1. Cells past a row's
-# limit were never computed and so carry "?".
+# order = number of elements, char = characteristic. `t_limit` is the exclusive
+# upper bound on t the table was generated with, as a function of m. Most tables
+# used a flat bound (the full header width), but EGZ_Z_2x_by_x2.tsv was produced
+# with the variable form that survives commented out in config.hpp:
+# smallestPowerBiggerThan(2, m) + m + 1. Cells past a row's limit were never
+# computed and so carry "?".
 FLAT = None
 
 # Marks a cell holding no value: never computed for that row, or abandoned under
