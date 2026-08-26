@@ -43,9 +43,12 @@ def run(solver, out_dir, budget=None):
         f = line.split("\t")
         if not f or not f[0]:
             continue
+        m = int(f[0])
         for t in range(1, len(f)):
-            if f[t]:
-                cells[(int(f[0]), t)] = f[t]
+            # Cells left of the diagonal are never computed and always hold "?",
+            # so only the computed region says anything about the budget.
+            if f[t] and t >= m:
+                cells[(m, t)] = f[t]
     return proc, cells
 
 

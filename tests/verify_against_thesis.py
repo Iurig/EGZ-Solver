@@ -31,12 +31,12 @@ from math import comb
 # `t_limit` is the exclusive upper bound on t the table was generated with, as a
 # function of m. Most tables used a flat bound (the full header width), but
 # EGZ_Z_2x_by_x2.tsv was produced with the variable form that survives commented
-# out in config.hpp: smallestPowerBiggerThan(2, m) + m + 1. Blanks past a row's
-# limit mean "not computed", not "no EGZ constant".
+# out in config.hpp: smallestPowerBiggerThan(2, m) + m + 1. Cells past a row's
+# limit were never computed and so carry "?".
 FLAT = None
 
-# Written by --max-work into a cell the solver gave up on. Distinct from blank,
-# which means "no EGZ constant exists" or "outside the computed range".
+# Marks a cell holding no value: never computed for that row, or abandoned under
+# --max-work. Distinct from blank, which means "no EGZ constant exists".
 ABANDONED = "?"
 
 RINGS = {
@@ -130,9 +130,10 @@ def check_shape(tables, rep):
 
 
 def check_blank_rule(tables, rep):
-    """Within the computed region, a cell is non-blank exactly when char(R)
-    divides C(t, m). Past a row's t_limit every cell is blank because it was
-    never computed."""
+    """A blank cell means one thing only: it was computed and no EGZ constant
+    exists, which for these rings is exactly when char(R) does not divide
+    C(t, m). Every cell outside a row's computed range -- left of the diagonal,
+    or past its t_limit -- must carry "?" instead."""
     checked = bad = 0
     detail = []
     for name, path in tables:
@@ -146,17 +147,20 @@ def check_blank_rule(tables, rep):
                 continue
             m = int(f[0])
             t_stop = limit(m) if limit else len(f)
-            for t in range(m, len(f)):
-                if f[t] == ABANDONED:
-                    continue  # gave up under --max-work; says nothing either way
+            for t in range(1, len(f)):
                 checked += 1
-                expect_blank = t >= t_stop or comb(t, m) % ch != 0
-                if expect_blank != (f[t] == ""):
+                if t < m or t >= t_stop:
+                    ok = f[t] == ABANDONED  # never computed, so never blank
+                elif f[t] == ABANDONED:
+                    continue  # gave up under --max-work; says nothing either way
+                else:
+                    ok = (f[t] == "") == (comb(t, m) % ch != 0)
+                if not ok:
                     bad += 1
                     table_bad += 1
         if table_bad:
             detail.append(f"{name}:{table_bad}")
-    rep.add("blank iff char(R) does not divide C(t,m)", bad == 0,
+    rep.add("blank iff computed and char(R) does not divide C(t,m)", bad == 0,
             f"{checked} cells, {bad} inconsistent" + (" [" + ", ".join(detail) + "]" if detail else ""))
 
 
@@ -332,6 +336,10 @@ def check_theorem_2_2(solver, rep, m_max=20, t_max=30):
     # Windows CreateProcess rejects a relative executable path written with
     # forward slashes, even though os.path.exists accepts it -- normalise first.
     solver = os.path.abspath(solver)
+    # Accept the Unix-style path on Windows too, so the invocation in the
+    # docstring works on both.
+    if not os.path.exists(solver) and os.path.exists(solver + ".exe"):
+        solver += ".exe"
     if not os.path.exists(solver):
         rep.add("Thm 2.2  Z_2, all m (solver)", False, f"no such binary: {solver}")
         return

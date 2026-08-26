@@ -4,7 +4,7 @@ A C++ brute-force calculator for arbitrary degree Erdös-Ginzburg-Ziv constants 
  - $ℤ_n$, for any natural $n$.
  - $ℤ_n^m$, for any natural $n$ and $m$.
  - $𝔽_4$.
- - $\frac{ℤ_2\[x\]}{x^2}$
+ - $\frac{ℤ_2[x]}{x^2}$
  - Products of any two of the above, via `product<R, P>` (e.g. `Z_2xZ_2`).
 
 `--list-rings` prints the instantiations the binary was built with; see
@@ -100,10 +100,16 @@ budget is per cell, so one abandoned cell does not penalise the next, and
 whatever was memoised before an abort stays available.
 
 Abandoned cells are written as `?` and reported on stderr. They are never left
-blank, which would be indistinguishable from "no EGZ constant exists":
+blank, which would be indistinguishable from "no EGZ constant exists". Here
+`--max-work 400` gave up on the five cells at the right-hand end of rows 3 and
+4; the `?` left of the diagonal are the ordinary never-computed ones.
 
 ```
-2       3       3               3       ?               ?       ?
+        1       2       3       4       5       6       7       8       9       10      11
+1                       2                       2                       2
+2       ?               3       3               3       3               3       3
+3       ?       ?                                                       ?       ?       ?
+4       ?       ?       ?                       2                       2       ?       ?
 ```
 
 A budget only costs you answers, it never changes them: any cell that finishes
@@ -117,28 +123,34 @@ header; the first column is `m`.
 
 So a cell containing `6` at row `m = 1`, column `t = 21` means `EGZ(21, 1) = 27`.
 
-A cell is blank in any of these cases, which the format does not distinguish:
- - `t < T_MIN(m)`, i.e. `t < m` — left of the diagonal, never computed.
- - `t >= T_MAX(m)` — beyond the requested bound.
- - `EGZ(t, m) - t <= -1`, including `EGZ(t, m) == 0`, which is the solver's way
-   of reporting that no EGZ constant exists for that `(t, m)`.
+A blank cell means the solver computed that `(t, m)` and got that `EGZ(t, m)` is infinite/no EGZ constant exists there. A blank is an answer.
 
-A cell holding `?` was abandoned under `--max-work`; see
-[Bounding the work per cell](#bounding-the-work-per-cell).
+**A `?` means no value was computed**, for one of three reasons:
+ - `t < T_MIN(m)`, i.e. `t < m` — left of the diagonal, outside the row's range
+   of `t`.
+ - `t >= T_MAX(m)` — beyond the bound the row was generated with.
+ - the search was abandoned under `--max-work`; see
+   [Bounding the work per cell](#bounding-the-work-per-cell).
 
-A row left out by `--skip` is absent from the file rather than written blank, so
-"not computed" stays distinguishable from the cases above.
+The first two are fixed by `(t, m)` and the row's bounds, so they are easy to
+tell from an abandoned cell, but the format does not distinguish the three.
 
-For $ℤ_n$ a cell is non-blank exactly when $\binom{t}{m} \equiv 0 \pmod n$, which
-is a useful sanity check on a generated table.
+A row left out by `--skip` is absent from the file entirely. An omitted row, a
+`?` and a blank are therefore three distinguishable things.
 
-All 6,125 cells across the committed $ℤ_n$ tables satisfy that criterion.
+Within a row's computed range, a $ℤ_n$ cell holds a value exactly when
+$\binom{t}{m} \equiv 0 \pmod n$ and is blank otherwise, which is a useful sanity
+check on a generated table.
+
+All 6,125 such cells across the committed $ℤ_n$ tables satisfy that criterion;
+`tests/verify_against_thesis.py` checks it, along with the rule that everything
+outside a computed range carries `?`.
 
 Note that `EGZ_Z_2x_by_x2.tsv` was generated with a per-row bound on `t` --
 `smallestPowerBiggerThan(2, m) + m + 1`, the form that survives commented out in
 `config.hpp` -- rather than the flat bound the other eight tables use. Its rows
-therefore stop well short of the header width, and those trailing blanks mean
-"not computed" rather than "no EGZ constant".
+therefore run out of values well short of the header width, and the `?` that
+follow mean "not computed", not "no EGZ constant".
 
 ## Search bounds
 `--m-max` and `--t-max` are not merely loop limits.

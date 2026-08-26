@@ -36,8 +36,8 @@ a failure.
 
 ## Regenerating the fixture
 
-`table_probe` reads a table, recomputes each non-blank cell, compares it against
-the stored value, and prints the result with a timing:
+`table_probe` reads a table, recomputes each cell that holds a value, compares
+it against the stored value, and prints the result with a timing:
 
 ```sh
 cmake --build build --target table_probe
@@ -105,7 +105,7 @@ fails. What it covers:
 | Thm 3.8 — ring-only bound | upper bound | 5,188 |
 | Thm 2.2 — `Z_2`, every `m` (needs `--solver`) | exact | 242 |
 
-Theorems 3.4 and 3.5 between them account for every one of the 866 non-blank
+Theorems 3.4 and 3.5 between them account for every one of the 866 value-holding
 cells of `EGZ_Z_4.tsv`, so that table is confirmed in full.
 
 Two caveats worth keeping in mind when reading a passing run:

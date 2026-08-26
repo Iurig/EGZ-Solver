@@ -36,32 +36,33 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
     // the file still ends without a trailing newline.
     output_file << "\n";
     output_file << m;
-    for (int i = 0; i < m; i++)
+    // One tab per cell, written before it, so the row ends without a trailing
+    // tab and every row is exactly T_MAX(m_max) - 1 cells wide.
+    for (int t = 1; t < T_MAX(m_max); t++) {
       output_file << "\t";
-    for (int t = T_MIN(m); t < T_MAX(m_max); t++) {
-      if (t < T_MAX(m)) {
-        int e = s.EGZ(t, m);
-        if (e == EGZ_ABANDONED) {
-          // Must be caught before the blank test below: e - t would be negative
-          // there, and the cell would be written blank as though no constant
-          // existed. "?" says the budget ran out instead.
-          abandoned++;
-          output_file << "?";
-        } else if (max(e - t, -1) == -1) {
-          if (t < T_MAX(m_max) - 1)
-            output_file << "\t";
-          continue;
-        } else {
-          if (!quiet) {
-            cout << "EGZ(" << t << ", " << R::name() << ", " << m << ") = " << e << endl;
-            cout << "EGZ-t = " << max(e - t, -1) << endl;
-            cout << endl;
-          }
-          output_file << e - t;
-        }
+      // Outside this row's range of t, so nothing was computed here. Blank is
+      // reserved for the one case where a blank is an answer, below.
+      if (t < T_MIN(m) || t >= T_MAX(m)) {
+        output_file << "?";
+        continue;
       }
-      if (t < T_MAX(m_max) - 1)
-        output_file << "\t";
+      int e = s.EGZ(t, m);
+      if (e == EGZ_ABANDONED) {
+        // Must be caught before the blank test below: e - t would be negative
+        // there, and the cell would be written blank as though no constant
+        // existed. "?" says the budget ran out instead.
+        abandoned++;
+        output_file << "?";
+        continue;
+      }
+      if (e - t <= -1)
+        continue; // no EGZ constant for this (t, m): the sole meaning of blank
+      if (!quiet) {
+        cout << "EGZ(" << t << ", " << R::name() << ", " << m << ") = " << e << endl;
+        cout << "EGZ-t = " << e - t << endl;
+        cout << endl;
+      }
+      output_file << e - t;
     }
   }
 

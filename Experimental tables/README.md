@@ -4,9 +4,10 @@ Computed Erdős-Ginzburg-Ziv constants, one `.tsv` per ring, produced by the
 solver in this repository.
 
 **Rows are `m`, columns are `t`, and a cell holds `EGZ(t, m) - t`, not
-`EGZ(t, m)` itself.** A blank cell has three possible meanings, which the format
-does not distinguish. See "Output format" in the [top-level README](../README.md)
-before reading the numbers.
+`EGZ(t, m)` itself.** A blank cell means the value was computed and no EGZ
+constant exists for that `(t, m)`; a `?` means no value was computed there. See
+"Output format" in the [top-level README](../README.md) before reading the
+numbers.
 
 ## License
 
