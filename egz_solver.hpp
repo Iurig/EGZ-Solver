@@ -43,6 +43,18 @@ public:
   // Work spent on the most recent EGZ(t, m).
   long long lastWork() const { return work; }
 
+  // Memoized e_m results held, across every degree. This is where essentially
+  // all of this solver's memory goes: each entry is a sequence (a vector of
+  // R::order ints) plus a value, in a hash table node. Reported by
+  // tests/compare_methods.cpp, since the two searches spend memory very
+  // differently and the totals are the point of comparing them.
+  size_t memoEntries() const {
+    size_t total = 0;
+    for (const auto &table : memorized_e_m)
+      total += table.size();
+    return total;
+  }
+
   sequence<R> subseq = sequence<R>();
   // Calculates e_m(S)
   R e_m(sequence<R> &S, int m) {

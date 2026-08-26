@@ -151,6 +151,76 @@ A budget only costs you answers, it never changes them: any cell that finishes
 under a budget holds exactly the value an unbudgeted run produces. Raising the
 budget can only turn `?` into a value, never alter one.
 
+## Two searches
+
+There are two implementations of `EGZ(t, m)`, and `--method` picks between them.
+They agree everywhere they have been compared; the reason to have both is that
+each one checks the other, and they are fast in different places.
+
+```sh
+./build/egz-solver --ring Z_7 --method bottom-up
+```
+
+**Top-down** (the default, `egz_solver.hpp`) takes each candidate length `l` in
+turn and searches for a counterexample: a sequence of length `l` with no
+zero-`e_m` subsequence of length `t`. The first `l` with no counterexample is the
+answer. It can stop the moment it finds one, and often does.
+
+**Bottom-up** (`egz_bottom_up.hpp`) works the other way. It finds every multiset
+of size `t` with `e_m = 0`, then every multiset of size `t + 1` containing one of
+those, and so on, stopping at the first size where every multiset is covered.
+Each level is one flat pass, because for `|S| > t` a multiset is covered exactly
+when `S - x` is covered for some `x` in it — no search and no backtracking.
+
+Only *which* `e_m` are zero ever matters to it: the values are computed once at
+level `t` and never looked at again.
+
+The trade is that bottom-up visits every multiset of every level, where top-down
+can stop early — but it never re-derives anything, and top-down re-derives a
+great deal, since each candidate length starts a fresh search over ground the
+last one covered.
+
+Sweeping `m < 12`, `t < 24`, every cell agreeing, with
+`tests/compare_methods.cpp`:
+
+| Ring | Time, top-down | Time, bottom-up | `e_m` memo, top-down | memo, bottom-up | Peak levels |
+| --- | --- | --- | --- | --- | --- |
+| `Z_3` | 3 ms | 2 ms | 2.8k entries | 3.0k | 435 multisets |
+| `F_4` | 89 ms | 35 ms | 24.4k | 25.7k | 7.1k |
+| `Z_2^2` | 307 ms | 45 ms | 24.4k | 25.7k | 11.5k |
+| `Z_5` | 368 ms | 140 ms | 134k | 140k | 36k |
+| `Z_7` | 77.1 s | 10.0 s | 4.27M | 4.43M | 3.26M |
+
+**Time** goes to bottom-up everywhere measured, by more as the ring grows: 1.5×
+on `Z_3`, 7.7× on `Z_7`. Per cell the spread is wider than the totals suggest —
+the worst `Z_7` cells run 5.0 s against 0.35 s, a 14× gap — and across 198 `Z_7`
+cells there was **no cell where bottom-up was slower**.
+
+The reason is that top-down re-derives. Each candidate length starts a fresh
+counterexample search over ground the previous one covered, so a cell answering
+at `l = t + 9` has run nine overlapping searches; bottom-up builds each level
+once from the one below.
+
+**Memory is close to a tie**, which is not what the descriptions suggest. Both
+are dominated by the memo of `e_m` results — around 375 MiB of it on that `Z_7`
+sweep — and bottom-up's is 3-5% larger, because it evaluates `e_m` on every
+multiset of size `t` rather than only the ones a search happens to reach. The
+levels it additionally holds are two at a time at one bit per multiset: **796 KiB
+against 375 MiB** on `Z_7`. The sweep is the cheap part.
+
+That level term is the one with a ceiling on it, though. A level of size `l` over
+a ring of order `k` holds `C(l + k - 1, k - 1)` multisets, growing fast in both,
+so a large enough ring with a large enough answer eventually becomes
+level-dominated rather than memo-dominated. Bottom-up gives up and returns `?`
+past a cap rather than trying to allocate; top-down has no such ceiling. Nothing
+measured so far comes near it, and no case has yet been found where top-down
+wins on either axis.
+
+Neither is a wrapper around the other: they have separate `e_m` implementations
+and separate memos, sharing only `sequence` and the ring. That is what makes
+their agreement worth something — see
+[Two searches, checked against each other](tests/README.md).
+
 ## Output format
 One `.tsv` per ring, named `EGZ_<ring>.tsv`. **Rows are `m`, columns are `t`, and
 a cell holds `EGZ(t, m) - t`, not `EGZ(t, m)` itself.** The first row is the `t`
@@ -204,13 +274,16 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Five suites run, in a few seconds:
+Eight suites run, in a few seconds:
 
- - `regression` replays 176 known-good values sampled from `Experimental tables/`
-   across all nine tables.
+ - `regression` and `regression_bottom_up` replay 176 known-good values sampled
+   from `Experimental tables/` across all nine tables — once with each of the
+   [two searches](#two-searches).
+ - `methods_agree` and `methods_agree_f4` run both searches over every cell of a
+   small sweep and fail on any disagreement.
  - `thesis_verification` checks the committed tables against the theorems proved
    in the accompanying thesis.
- - `rings` checks the rings themselves: ring axioms, and that each `Z_n[x]/(P)`
+ - `rings` checks the rings themselves: ring axioms, and that each quotient
    reproduces the built-in ring it generalises.
  - `skip_rules` and `max_work` drive those two options through the CLI.
 
@@ -220,7 +293,8 @@ See [tests/README.md](tests/README.md).
 | File | Contents |
 | --- | --- |
 | `main.cpp` | CLI and the table writer. |
-| `egz_solver.hpp` | The search itself: `e_m`, counterexample enumeration, `EGZ(t, m)`. |
+| `egz_solver.hpp` | The top-down search: `e_m`, counterexample enumeration, `EGZ(t, m)`. |
+| `egz_bottom_up.hpp` | The bottom-up search, an independent second implementation. |
 | `rings.hpp` | Ring implementations (`Zn`, `Znp`, `F4`, `Z_2_over`, `product`). |
 | `quotient.hpp` | Parses and builds the `Z_n[x]/(P)` rings named at run time. |
 | `ring_registry.hpp` | Maps a `--ring` name or spec to its ring. |

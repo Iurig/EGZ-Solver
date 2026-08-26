@@ -136,6 +136,39 @@ Regenerate the goldens after deliberately changing a ring:
 ./build/dump_ring --all > tests/ring_goldens.tsv
 ```
 
+## Two searches, checked against each other
+
+There are two implementations of `EGZ(t, m)` -- see "Two searches" in the
+[top-level README](../README.md). They share only `sequence` and the ring: the
+`e_m` recurrence and the memo are written separately in each. That is what makes
+agreement between them evidence rather than a tautology, and it is why the
+duplication is deliberate rather than something to factor out.
+
+Three suites use them against each other:
+
+ - `regression` and `regression_bottom_up` replay the same 176 published values,
+   one with each method. `run_regression` is templated on the solver, so both
+   run through identical harness code and any difference is a difference between
+   the searches.
+ - `methods_agree` and `methods_agree_f4` run `compare_methods` over every cell
+   of a small sweep, comparing results and timing each. They fail on any
+   disagreement -- and on having compared nothing at all, which a budget too
+   tight to finish either side would otherwise report as success.
+
+`compare_methods` is also the benchmark:
+
+```sh
+cmake --build build --target compare_methods
+./build/compare_methods Z_7 1 12 24 20000
+```
+
+The arguments are the ring, `m-min`, `m-max`, `t-max`, and an optional per-cell
+budget in milliseconds; once a cell exceeds it, that method stops for the rest of
+the row, since cost grows with `t`. Cells only one method finished are reported
+as one-sided and not counted as agreements. It prints a row per cell and then
+totals for time, memo size and peak level size, which are the three numbers the
+two methods trade off against each other.
+
 ## Verifying against the published theorems
 
 `verify_against_thesis.py` checks the committed tables against the results

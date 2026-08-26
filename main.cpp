@@ -5,6 +5,7 @@
 
 #include "conditional_file_stream.hpp"
 #include "config.hpp"
+#include "egz_bottom_up.hpp"
 #include "egz_solver.hpp"
 #include "ring_registry.hpp"
 #include "skip_rule.hpp"
@@ -13,12 +14,14 @@ using namespace std;
 
 // Writes one table for ring R: rows are m, columns are t, and each cell holds
 // EGZ(t, m) - t. See "Output format" in README.md.
-template <typename R>
+template <typename R, typename Solver>
 void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool quiet, const SkipRule &skip) {
   string output_file_name = "EGZ_" + R::name() + ".tsv";
   ConditionalFileStream output_file(output_file_name, to_file, out_dir);
 
-  EGZSolver<R> s;
+  // Either EGZSolver<R> or BottomUpEGZSolver<R>; see --method. They are
+  // independent implementations that agree, not one wrapping the other.
+  Solver s;
 
   for (int i = 1; i < T_MAX(m_max); i++)
     output_file << "\t" << i;
@@ -101,6 +104,9 @@ static void usage() {
        << "                  Skipped rows are omitted, not written blank.\n"
        << "  --max-work N    give up on a cell after N work units (0 = no limit).\n"
        << "                  Abandoned cells are written as ?, never left blank.\n"
+       << "  --method WHICH  top-down (default) or bottom-up. Two independent\n"
+       << "                  searches that agree; bottom-up is usually faster but\n"
+       << "                  holds a whole level in memory. See README.md.\n"
        << "  --no-file       print progress only, do not write a table\n"
        << "  --quiet         suppress per-value progress output\n"
        << "  --list-rings    list supported ring names and exit\n"
@@ -136,7 +142,7 @@ int main(int argc, char **argv) {
   int m_min = 1;
   int m_max = M_MAX();
   int t_max = T_MAX();
-  bool to_file = true, quiet = false;
+  bool to_file = true, quiet = false, bottom_up = false;
   long long max_work = 0;
   vector<string> skip_specs;
 
@@ -181,6 +187,20 @@ int main(int argc, char **argv) {
         return 2;
       }
       skip_specs.push_back(argv[++i]);
+    } else if (arg == "--method") {
+      if (i + 1 >= argc) {
+        cerr << "--method requires a value" << endl;
+        return 2;
+      }
+      string value = argv[++i];
+      if (value == "bottom-up")
+        bottom_up = true;
+      else if (value == "top-down")
+        bottom_up = false;
+      else {
+        cerr << "--method: expected top-down or bottom-up, got '" << value << "'" << endl;
+        return 2;
+      }
     } else if (arg == "--no-file") {
       to_file = false;
     } else if (arg == "--quiet") {
@@ -222,7 +242,10 @@ int main(int argc, char **argv) {
             return;
           }
         }
-        findEGZs<R>(m_max, m_min, out_dir, to_file, quiet, skip);
+        if (bottom_up)
+      findEGZs<R, BottomUpEGZSolver<R>>(m_max, m_min, out_dir, to_file, quiet, skip);
+    else
+      findEGZs<R, EGZSolver<R>>(m_max, m_min, out_dir, to_file, quiet, skip);
       },
       &ring_error);
   if (!known) {
