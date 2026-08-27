@@ -12,15 +12,13 @@
 
 using namespace std;
 
-// Writes one table for ring R: rows are m, columns are t, and each cell holds
-// EGZ(t, m) - t. See "Output format" in README.md.
+// Writes one table for ring R: rows are m, columns are t, and each cell holds EGZ(t, m) - t. See "Output format" in README.md.
 template <typename R, typename Solver>
 void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool quiet, const SkipRule &skip) {
   string output_file_name = "EGZ_" + R::name() + ".tsv";
   ConditionalFileStream output_file(output_file_name, to_file, out_dir);
 
-  // TopDownEGZSolver<R> or BottomUpEGZSolver<R>; see --method. Independent
-  // implementations that agree, not one wrapping the other.
+  // TopDownEGZSolver<R> or BottomUpEGZSolver<R>; see --method. Independent implementations that agree, not one wrapping the other.
   Solver s;
 
   for (int i = 1; i < T_MAX(m_max); i++)
@@ -29,30 +27,26 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
   vector<int> skipped;
   long long abandoned = 0;
   for (int m = m_min; m < m_max; m++) {
-    // Omitted rather than blanked: an absent row says "not computed", which a
-    // blank row could not distinguish from "no EGZ constant exists".
+    // Omitted rather than blanked: an absent row says "not computed", which a blank row could not distinguish from "no EGZ constant
+    // exists".
     if (skip.skips(m)) {
       skipped.push_back(m);
       continue;
     }
-    // Each row is preceded by its newline, so omitting one leaves no gap and
-    // the file still ends without a trailing newline.
+    // Each row is preceded by its newline, so omitting one leaves no gap and the file still ends without a trailing newline.
     output_file << "\n";
     output_file << m;
-    // One tab before each cell, so a row ends without a trailing tab and is
-    // exactly T_MAX(m_max) - 1 cells wide.
+    // One tab before each cell, so a row ends without a trailing tab and is exactly T_MAX(m_max) - 1 cells wide.
     for (int t = 1; t < T_MAX(m_max); t++) {
       output_file << "\t";
-      // Outside this row's range of t, so nothing was computed. Blank is
-      // reserved for the one case where it is an answer, below.
+      // Outside this row's range of t, so nothing was computed. Blank is reserved for the one case where it is an answer, below.
       if (t < T_MIN(m) || t >= T_MAX(m)) {
         output_file << "?";
         continue;
       }
       int e = s.EGZ(t, m);
       if (e == EGZ_ABANDONED) {
-        // Must come before the blank test below, where e - t is negative and
-        // would be written blank as though no constant existed.
+        // Must come before the blank test below, where e - t is negative and would be written blank as though no constant existed.
         abandoned++;
         output_file << "?";
         continue;
@@ -66,14 +60,13 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
       }
       output_file << e - t;
     }
-    // A row takes minutes and a table hours, so flush: an interrupted run then
-    // keeps every row it finished, not whatever was past the buffer.
+    // A row takes minutes and a table hours, so flush: an interrupted run then keeps every row it finished, not whatever was past the
+    // buffer.
     output_file.flush();
   }
 
   if (abandoned > 0) {
-    // The budget is not the only thing that abandons a cell -- the bottom-up
-    // search also gives up on a level too large to hold -- so naming
+    // The budget is not the only thing that abandons a cell -- the bottom-up search also gives up on a level too large to hold -- so naming
     // --max-work when none was set would send the reader after the wrong knob.
     cerr << "abandoned " << abandoned << " cell" << (abandoned == 1 ? "" : "s");
     if (workBudget() > 0)
@@ -114,6 +107,10 @@ static void usage() {
        << "                  Skipped rows are omitted, not written blank.\n"
        << "  --max-work N    give up on a cell after N work units (0 = no limit).\n"
        << "                  Abandoned cells are written as ?, never left blank.\n"
+       << "  --memo-cap N    hold at most N memoized e_m values, dropping the least\n"
+       << "                  recently used first (0 = no limit). Counted in entries,\n"
+       << "                  not bytes; a recomputed value is charged to --max-work\n"
+       << "                  again.\n"
        << "  --method WHICH  bottom-up (default) or top-down: two independent\n"
        << "                  searches that agree. top-down is slower but has no\n"
        << "                  ceiling on memory. See README.md.\n"
@@ -146,6 +143,27 @@ static int intArg(int &i, int argc, char **argv, const string &flag) {
   }
 }
 
+// Like intArg, but 64-bit: a useful memo cap runs past what int holds, and stoull reads a negative as its wraparound.
+static unsigned long long ullArg(int &i, int argc, char **argv, const string &flag) {
+  if (i + 1 >= argc) {
+    cerr << flag << " requires a value" << endl;
+    exit(2);
+  }
+  string raw = argv[++i];
+  try {
+    if (raw.empty() || raw[0] == '-')
+      throw invalid_argument("not a non-negative integer");
+    size_t consumed = 0;
+    unsigned long long value = stoull(raw, &consumed);
+    if (consumed != raw.size())
+      throw invalid_argument("trailing characters");
+    return value;
+  } catch (const exception &) {
+    cerr << flag << ": expected a non-negative integer, got '" << raw << "'" << endl;
+    exit(2);
+  }
+}
+
 int main(int argc, char **argv) {
   string ring = "Z_2";
   string out_dir = DEFAULT_OUTPUT_DIR;
@@ -154,6 +172,7 @@ int main(int argc, char **argv) {
   int t_max = T_MAX();
   bool to_file = true, quiet = false, bottom_up = true;
   long long max_work = 0;
+  unsigned long long memo_cap = memoCap();
   vector<string> skip_specs;
 
   for (int i = 1; i < argc; i++) {
@@ -191,6 +210,8 @@ int main(int argc, char **argv) {
       t_max = intArg(i, argc, argv, arg);
     } else if (arg == "--max-work") {
       max_work = intArg(i, argc, argv, arg);
+    } else if (arg == "--memo-cap") {
+      memo_cap = ullArg(i, argc, argv, arg);
     } else if (arg == "--skip") {
       if (i + 1 >= argc) {
         cerr << "--skip requires a value" << endl;
@@ -231,11 +252,11 @@ int main(int argc, char **argv) {
     return 2;
   }
 
-  // Must happen before any solver is built: they size their memo tables from
-  // M_MAX() at construction.
+  // Must happen before any solver is built: they size their memo tables from M_MAX() at construction.
   setSearchBounds(m_max, t_max);
   setVerbose(!quiet);
   setWorkBudget(max_work);
+  setMemoCap(memo_cap);
 
   int bad_spec = 0;
   string ring_error;
@@ -259,8 +280,7 @@ int main(int argc, char **argv) {
       },
       &ring_error);
   if (!known) {
-    // A failed quotient spec gets its own message; anything else is just a
-    // name nothing answers to.
+    // A failed quotient spec gets its own message; anything else is just a name nothing answers to.
     if (!ring_error.empty())
       cerr << "--ring " << ring << ": " << ring_error << endl;
     else

@@ -45,6 +45,7 @@ same either way.
 | `--out-dir DIR` | Where to write the table (default `Experimental tables`). |
 | `--skip EXPR` | Leave rows out of the table; repeatable. See [Skipping rows](#skipping-rows). |
 | `--max-work N` | Give up on a cell after `N` work units; `0` is unlimited. See [Bounding the work per cell](#bounding-the-work-per-cell). |
+| `--memo-cap N` | Hold at most `N` memoized `e_m` values, dropping the least recently used; `0` is unlimited. See [Bounding the memo](#bounding-the-memo). |
 | `--no-file` | Print progress only; write nothing. |
 | `--quiet` | Suppress per-value progress output. |
 | `--method WHICH` | `bottom-up` (default) or `top-down`. See [How the search works](#how-the-search-works). |
@@ -151,6 +152,30 @@ blank, which would be indistinguishable from "no EGZ constant exists". Here
 A budget only costs you answers, it never changes them: any cell that finishes
 under a budget holds exactly the value an unbudgeted run produces. Raising the
 budget can only turn `?` into a value, never alter one.
+
+## Bounding the memo
+
+Both searches memoize every `e_m` they evaluate, and by default keep all of it:
+the reuse is most of the speed. On a large ring that memo is where the memory
+goes, and `--memo-cap N` bounds it -- once it holds `N` entries, each new entry
+evicts the least recently used.
+
+```sh
+./build/egz-solver --ring F_4 --memo-cap 20000000
+```
+
+The cap counts entries, not bytes, so the footprint per entry depends on the ring;
+measure an uncapped run and scale from there rather than deriving a number.
+
+Eviction never changes an answer -- a miss recomputes the value -- so a capped
+run produces the same table as an uncapped one, only slower. The two budgets do
+interact, though: a recomputed value is charged to `--max-work` again, so a
+tight cap and a tight budget together can abandon a cell that either alone would
+finish.
+
+The cap is one number spanning every `m` rather than one per degree, and it is
+read once, when the solver is built. There is a compiled-in default too,
+`-DEGZ_MEMO_CAP=`, which the flag overrides at run time.
 
 ## How the search works
 
@@ -259,7 +284,7 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Eight suites run, in a few seconds:
+Ten suites run, in a few seconds:
 
  - `regression` and `regression_bottom_up` replay 176 known-good values sampled
    from `Experimental tables/` across all nine tables — once with each of the
@@ -270,7 +295,8 @@ Eight suites run, in a few seconds:
    in the accompanying thesis.
  - `rings` checks the rings themselves: ring axioms, and that each quotient
    reproduces the built-in ring it generalises.
- - `skip_rules` and `max_work` drive those two options through the CLI.
+ - `skip_rules`, `max_work` and `memo_cap` drive those three options through the
+   CLI.
 
 See [tests/README.md](tests/README.md).
 
@@ -284,7 +310,8 @@ See [tests/README.md](tests/README.md).
 | `quotient.hpp` | Parses and builds the `Z_n[x]/(P)` rings named at run time. |
 | `ring_registry.hpp` | Maps a `--ring` name or spec to its ring. |
 | `sequence.hpp` | Multiset of ring elements, with hashing for memoization. |
-| `config.hpp` | Search bounds (`M_MAX`, `T_MIN`, `T_MAX`). |
+| `config.hpp` | Search bounds (`M_MAX`, `T_MIN`, `T_MAX`), the work budget, and the memo cap. |
+| `memo_table.hpp` | The `e_m` memo shared by both searches, with LRU eviction under `--memo-cap`. |
 | `skip_rule.hpp` | Parses and applies the `--skip` expressions. |
 | `conditional_file_stream.hpp` | Output stream that can be switched off. |
 

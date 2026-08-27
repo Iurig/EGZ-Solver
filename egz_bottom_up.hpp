@@ -5,10 +5,10 @@
 #include <iostream>
 #include <new>
 #include <stdexcept>
-#include <unordered_map>
 #include <vector>
 
 #include "config.hpp"
+#include "memo_table.hpp"
 #include "sequence.hpp"
 
 #ifndef EGZ_MAX_LEVEL
@@ -32,7 +32,8 @@
 template <typename R>
 class BottomUpEGZSolver {
 private:
-  std::vector<std::unordered_map<sequence<R>, R>> memorized_e_m;
+  // One table per m, sized from M_MAX() at construction. See memo_table.hpp.
+  MemoTable<R> memorized_e_m;
 
   long long work = 0;
   bool aborted = false;
@@ -113,9 +114,8 @@ private:
       return 0;
     if (S.size() == 1)
       return S.element();
-    auto it = memorized_e_m[m].find(S);
-    if (it != memorized_e_m[m].end())
-      return it->second;
+    if (const R *hit = memorized_e_m.find(m, S))
+      return *hit;
     if (spendWork())
       return 0;
 
@@ -125,7 +125,7 @@ private:
     S.insert(x);
     if (aborted)
       return 0;
-    memorized_e_m[m][S] = value;
+    memorized_e_m.insert(m, S, value);
     return value;
   }
 
@@ -140,12 +140,7 @@ public:
 
   // Memoized e_m results held. Unlike the top-down search, not where the memory goes: only level t consults e_m, so this stops growing once
   // the sweep starts climbing.
-  size_t memoEntries() const {
-    size_t total = 0;
-    for (const auto &table : memorized_e_m)
-      total += table.size();
-    return total;
-  }
+  size_t memoEntries() const { return memorized_e_m.size(); }
 
   // Multisets in the largest level allocated, over the solver's lifetime; two are live at once at one bit each, so about peakLevel() / 4
   // bytes. The cost the top-down search does not pay, and why this one has a ceiling.
@@ -159,9 +154,9 @@ public:
   // Same contract as the top-down search: 0 when no EGZ constant exists, EGZ_ABANDONED when --max-work, the level cap, or memory stopped it
   // early. A work unit here is one multiset visited, not what the top-down search charges, so --max-work means different things to the two.
   //
-  // MAX_LEVEL_SIZE bounds a level; nothing bounds the memo, which grows with every cell and is never dropped because that reuse is most of
-  // the speed. Out of memory is a cell this search cannot do, which is what EGZ_ABANDONED means. The memo goes with it: holding a cache no
-  // later cell can afford would abandon those too.
+  // MAX_LEVEL_SIZE bounds a level and --memo-cap the memo, which otherwise grows with every cell and is never dropped because that reuse is
+  // most of the speed. Out of memory is a cell this search cannot do, which is what EGZ_ABANDONED means. The memo goes with it: holding a
+  // cache no later cell can afford would abandon those too.
   int EGZ(int t, int m) {
     try {
       return search(t, m);
@@ -179,15 +174,12 @@ private:
   // Frees the memo, keeping the per-m indexing. Runs from the catch handler above, so it must not allocate: a fresh table to swap in would
   // ask for the memory it is releasing, and a throw out of a catch handler is the abort being avoided. clear() only releases, and the nodes
   // are where memory is.
-  void dropMemo() {
-    for (auto &table : memorized_e_m)
-      table.clear();
-  }
+  void dropMemo() { memorized_e_m.clear(); }
 
   int search(int t, int m) {
     work = 0;
     aborted = false;
-    if (m < 0 || m >= (int)memorized_e_m.size()) {
+    if (m < 0 || m >= memorized_e_m.levels()) {
       std::cerr << "EGZ: m=" << m << " is outside the compiled bound M_MAX=" << M_MAX() << "; raise --m-max" << std::endl;
       exit(2);
     }

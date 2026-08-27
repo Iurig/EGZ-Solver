@@ -77,6 +77,14 @@ budget never solves fewer cells. Runs under `ctest` as `max_work`.
 python tests/test_max_work.py build/egz-solver
 ```
 
+`test_memo_cap.py` checks the corresponding property for `--memo-cap`: a capped
+run produces the same table as an uncapped one, under either search, down to a
+cap of one entry. Runs under `ctest` as `memo_cap`.
+
+```sh
+python tests/test_memo_cap.py build/egz-solver
+```
+
 ## Ring structure
 
 `test_rings.py` checks the rings themselves rather than the search. It runs

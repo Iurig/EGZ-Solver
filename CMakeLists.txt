@@ -18,13 +18,17 @@ option(EGZ_DEBUG "Print search progress to stdout" ON)
 set(EGZ_M_MAX 20 CACHE STRING "Exclusive upper bound on m")
 set(EGZ_T_MAX 25 CACHE STRING "Exclusive upper bound on t (also the sequence hash radix)")
 
+# Entries the e_m memo may hold before evicting the least recently used; 0 is
+# unlimited. Also settable per run with --memo-cap.
+set(EGZ_MEMO_CAP 0 CACHE STRING "Cap on memoized e_m entries (0 = unlimited)")
+
 add_library(egz-core INTERFACE)
 target_include_directories(egz-core INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(egz-core INTERFACE cxx_std_17)
 
 add_executable(egz-solver main.cpp)
 target_link_libraries(egz-solver PRIVATE egz-core)
-target_compile_definitions(egz-solver PRIVATE EGZ_M_MAX=${EGZ_M_MAX} EGZ_T_MAX=${EGZ_T_MAX})
+target_compile_definitions(egz-solver PRIVATE EGZ_M_MAX=${EGZ_M_MAX} EGZ_T_MAX=${EGZ_T_MAX} EGZ_MEMO_CAP=${EGZ_MEMO_CAP})
 if(EGZ_DEBUG)
   target_compile_definitions(egz-solver PRIVATE DEBUG)
 endif()
@@ -103,6 +107,11 @@ if(Python3_Interpreter_FOUND)
   # Checks that --max-work only ever costs answers, never changes them.
   add_test(NAME max_work
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_max_work.py
+                   $<TARGET_FILE:egz-solver>)
+
+  # Checks that --memo-cap only ever costs time, never answers.
+  add_test(NAME memo_cap
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_memo_cap.py
                    $<TARGET_FILE:egz-solver>)
 
   # Ring axioms, the goldens that say which rings must come out identical, and
