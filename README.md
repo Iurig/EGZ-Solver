@@ -155,29 +155,22 @@ budget can only turn `?` into a value, never alter one.
 ## How the search works
 
 `EGZ(t, m)` is computed level by level. The solver finds every multiset of size
-`t` with `e_m = 0`, then every multiset of size `t + 1` containing one of those,
-then every one of size `t + 2` containing one of *those*, and stops at the first
-size where every multiset is covered. That size is the answer.
+`t` with `e_m = 0`, then recurses, finding every multiset of size `t + i + 1` 
+containing a multiset of size `t + i`, and stops at the first size where every 
+multiset is covered. That size is the `EGZ` in question.
 
-Each level is a single flat pass with no search and no backtracking, because for
-`|S| > t` a multiset is covered exactly when `S - x` is covered for some `x` in
-it. Only *which* `e_m` are zero ever matters: the values are computed once at
-level `t` and never looked at again.
+Each level is a single flat pass with no search and no backtracking, because 
+which `S` have `e_m(S) = 0` is a function only of *which* `e_m(S’)` are zero in
+sizes one smaller than `S`, so the values are computed once at level `t` and
+never looked at again.
 
-Two consequences are worth knowing before running anything large.
-
-**The `e_m` evaluations are the bottleneck**, not the levels. Deciding which
-`e_m` vanish takes 61–72% of the time across the rings measured, despite
-touching roughly a tenth as many multisets as the climb above it — about 270 ns
-per multiset at level `t` against 13 ns on the way up.
+Worth knowing before running anything large:
 
 **Memory has a ceiling.** Two levels are live at a time, one bit per multiset,
 and a level of size `l` over a ring of order `k` holds `C(l + k - 1, k - 1)` of
 them. Past `EGZ_MAX_LEVEL` the solver writes `?` rather than trying to allocate.
-The default admits about 200 MB of levels, which is generous on purpose:
-`EGZ(12, Z_12, 1)` — the classical Erdős-Ginzburg-Ziv case, answer `2n - 1 = 23`
-— needs a level of 548 million multisets, and solves in 17.5 s using 282 MB.
-Lower it with `-DEGZ_MAX_LEVEL=` if memory matters more than reach.
+The default admits about 200 MB of levels to allow for the rest being allocated 
+for `e_m`. This is editable.
 
 For most rings none of this binds: on a `Z_7` sweep the levels came to 796 KiB
 against 375 MiB of `e_m` memo, so the memo is what you actually pay for.
@@ -185,14 +178,15 @@ against 375 MiB of `e_m` memo, so the memo is what you actually pay for.
 ### The other search
 
 `--method top-down` selects a second, independent implementation
-(`egz_top_down.hpp`). It takes each candidate length `l` in turn and searches
-for a counterexample — a sequence of length `l` with no zero-`e_m` subsequence
-of length `t` — and returns the first `l` that has none.
+(`egz_top_down.hpp`), which was the one used in the original thesis. It takes
+each candidate length `l` in turn and searches for a counterexample — a 
+sequence of length `l` with no zero-`e_m` subsequence of length `t` — and 
+returns the first `l` that has none.
 
-It exists because two implementations that agree are worth more than one that
-does not disagree with itself. They share only `sequence` and the ring; the `e_m`
-recurrence and the memo are written separately in each, and
-[the test suite](tests/README.md) holds them to producing identical tables.
+It still exists because it is still useful for generating tests, as they share
+only `sequence` and the ring; the `e_m` recurrence and the memo are written 
+separately in each, and [the test suite](tests/README.md) holds them to 
+producing identical tables.
 
 It is also slower, because each candidate length starts a fresh search over
 ground the previous one covered. Sweeping `m < 12`, `t < 24` with
@@ -212,7 +206,8 @@ worst ran 5.0 s against 0.35 s. Memory is near a tie: both are dominated by the
 multiset of size `t` rather than only the ones a search reaches.
 
 What top-down still has is no ceiling — it never holds a level. The one cell
-found where bottom-up gives up, though, is one top-down could not finish either.
+found where bottom-up gives up due to its ceiling, though, is one top-down could
+not finish either.
 
 ## Output format
 One `.tsv` per ring, named `EGZ_<ring>.tsv`. **Rows are `m`, columns are `t`, and
