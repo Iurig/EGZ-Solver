@@ -1,5 +1,7 @@
+#include <cctype>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -108,9 +110,10 @@ static void usage() {
        << "  --max-work N    give up on a cell after N work units (0 = no limit).\n"
        << "                  Abandoned cells are written as ?, never left blank.\n"
        << "  --memo-cap N    hold at most N memoized e_m values, dropping the least\n"
-       << "                  recently used first (0 = no limit). Counted in entries,\n"
-       << "                  not bytes; a recomputed value is charged to --max-work\n"
-       << "                  again.\n"
+       << "                  recently used first (0 = no limit). A K/M/G/T suffix\n"
+       << "                  reads N as bytes instead (--memo-cap 8G), which is an\n"
+       << "                  estimate, not an exact ceiling. A recomputed value is\n"
+       << "                  charged to --max-work again.\n"
        << "  --method WHICH  bottom-up (default) or top-down: two independent\n"
        << "                  searches that agree. top-down is slower but has no\n"
        << "                  ceiling on memory. See README.md.\n"
@@ -143,25 +146,60 @@ static int intArg(int &i, int argc, char **argv, const string &flag) {
   }
 }
 
-// Like intArg, but 64-bit: a useful memo cap runs past what int holds, and stoull reads a negative as its wraparound.
-static unsigned long long ullArg(int &i, int argc, char **argv, const string &flag) {
+// Multiplier a --memo-cap suffix stands for, or 0 for one that stands for nothing. K, M, G and T are binary, and the KB and KiB spellings
+// mean the same thing; an empty suffix is the entry count, which has no multiplier of its own.
+static unsigned long long sizeSuffix(string suffix) {
+  for (char &c : suffix)
+    c = (char)tolower((unsigned char)c);
+  if (suffix.size() > 1 && suffix.back() == 'b')
+    suffix.pop_back();
+  if (suffix.size() > 1 && suffix.back() == 'i')
+    suffix.pop_back();
+  if (suffix.size() != 1)
+    return 0;
+  switch (suffix[0]) {
+  case 'k':
+    return 1ULL << 10;
+  case 'm':
+    return 1ULL << 20;
+  case 'g':
+    return 1ULL << 30;
+  case 't':
+    return 1ULL << 40;
+  default:
+    return 0;
+  }
+}
+
+// --memo-cap, in whichever unit it was written: a bare number is entries, a suffixed one is bytes. 64-bit because either runs past what int
+// holds, and because stoull reads a negative as its wraparound. Sets one of entries and bytes and clears the other, so the last spelling on
+// the command line is the one that counts.
+static void memoCapArg(int &i, int argc, char **argv, const string &flag, unsigned long long &entries, unsigned long long &bytes) {
   if (i + 1 >= argc) {
     cerr << flag << " requires a value" << endl;
     exit(2);
   }
   string raw = argv[++i];
+  unsigned long long value = 0, scale = 1;
+  size_t consumed = 0;
   try {
     if (raw.empty() || raw[0] == '-')
-      throw invalid_argument("not a non-negative integer");
-    size_t consumed = 0;
-    unsigned long long value = stoull(raw, &consumed);
+      throw invalid_argument("not a non-negative number");
+    value = stoull(raw, &consumed);
     if (consumed != raw.size())
-      throw invalid_argument("trailing characters");
-    return value;
+      scale = sizeSuffix(raw.substr(consumed));
+    if (scale == 0)
+      throw invalid_argument("unknown unit");
   } catch (const exception &) {
-    cerr << flag << ": expected a non-negative integer, got '" << raw << "'" << endl;
+    cerr << flag << ": expected entries, or bytes with a K/M/G/T suffix, got '" << raw << "'" << endl;
     exit(2);
   }
+  if (value > numeric_limits<unsigned long long>::max() / scale) {
+    cerr << flag << ": " << raw << " does not fit in 64 bits" << endl;
+    exit(2);
+  }
+  entries = scale == 1 ? value : 0;
+  bytes = scale == 1 ? 0 : value * scale;
 }
 
 int main(int argc, char **argv) {
@@ -172,7 +210,7 @@ int main(int argc, char **argv) {
   int t_max = T_MAX();
   bool to_file = true, quiet = false, bottom_up = true;
   long long max_work = 0;
-  unsigned long long memo_cap = memoCap();
+  unsigned long long memo_cap = memoCap(), memo_bytes = memoBytes();
   vector<string> skip_specs;
 
   for (int i = 1; i < argc; i++) {
@@ -211,7 +249,7 @@ int main(int argc, char **argv) {
     } else if (arg == "--max-work") {
       max_work = intArg(i, argc, argv, arg);
     } else if (arg == "--memo-cap") {
-      memo_cap = ullArg(i, argc, argv, arg);
+      memoCapArg(i, argc, argv, arg, memo_cap, memo_bytes);
     } else if (arg == "--skip") {
       if (i + 1 >= argc) {
         cerr << "--skip requires a value" << endl;
@@ -257,6 +295,7 @@ int main(int argc, char **argv) {
   setVerbose(!quiet);
   setWorkBudget(max_work);
   setMemoCap(memo_cap);
+  setMemoBytes(memo_bytes);
 
   int bad_spec = 0;
   string ring_error;

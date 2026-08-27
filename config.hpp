@@ -26,6 +26,8 @@ inline int t_max = EGZ_T_MAX;
 // Work units one EGZ(t, m) may spend before being abandoned; 0 is unlimited. See "Bounding the work per cell" in README.md.
 inline long long max_work = 0;
 inline unsigned long long memo_cap = EGZ_MEMO_CAP;
+// A byte budget for the same memo, converted to an entry cap when the table is built; 0 leaves memo_cap in charge.
+inline unsigned long long memo_bytes = 0;
 // Gates the DEBUG progress tracing in egz_top_down.hpp (see --quiet).
 inline bool verbose = true;
 } // namespace egz
@@ -52,3 +54,8 @@ inline void setWorkBudget(long long units) { egz::max_work = units; }
 inline unsigned long long memoCap() { return egz::memo_cap; }
 // Must be called before any solver is constructed: MemoTable reads the cap once.
 inline void setMemoCap(unsigned long long entries) { egz::memo_cap = entries; }
+
+// Same cap expressed in bytes, which MemoTable divides by its estimate of what an entry costs. Takes precedence over setMemoCap(), and is
+// approximate: see bytesPerEntry() in memo_table.hpp.
+inline unsigned long long memoBytes() { return egz::memo_bytes; }
+inline void setMemoBytes(unsigned long long bytes) { egz::memo_bytes = bytes; }

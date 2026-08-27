@@ -4,7 +4,8 @@
     python tests/test_memo_cap.py path/to/egz-solver
 
 Eviction must cost time and nothing else: a capped run produces the table an
-uncapped run produces, under either search.
+uncapped run produces, under either search, whether the cap was written in
+entries or in bytes.
 """
 
 import io
@@ -17,6 +18,8 @@ RING = "Z_3"
 M_MAX = "7"
 T_MAX = "14"
 CAPS = [1, 16, 500, 100000]
+# The same flag read as bytes; the smallest of these buys well under one entry.
+BYTE_CAPS = ["1K", "64KiB", "4MB", "1G"]
 
 failures = []
 
@@ -63,14 +66,16 @@ def main():
             _, zero = run(solver, tmp, method, 0)
             check("%s: --memo-cap 0 means unlimited" % method, zero == base)
 
-            for cap in CAPS:
+            for cap in CAPS + BYTE_CAPS:
                 _, capped = run(solver, tmp, method, cap)
-                check("%s: cap %d matches the uncapped run" % (method, cap), capped == base)
+                check("%s: cap %s matches the uncapped run" % (method, cap), capped == base)
 
         check("both searches agree under a cap", tables["bottom-up"] == tables["top-down"])
 
         check("rejects a negative cap", rejects(solver, "-1"))
         check("rejects a non-numeric cap", rejects(solver, "abc"))
+        check("rejects an unknown unit", rejects(solver, "8X"))
+        check("rejects a byte cap that overflows", rejects(solver, "18446744073709551615K"))
 
     print()
     if failures:

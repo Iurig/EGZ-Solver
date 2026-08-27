@@ -79,7 +79,8 @@ python tests/test_max_work.py build/egz-solver
 
 `test_memo_cap.py` checks the corresponding property for `--memo-cap`: a capped
 run produces the same table as an uncapped one, under either search, down to a
-cap of one entry. Runs under `ctest` as `memo_cap`.
+cap of one entry, and whether the cap was written in entries or in bytes. Runs
+under `ctest` as `memo_cap`.
 
 ```sh
 python tests/test_memo_cap.py build/egz-solver

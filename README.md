@@ -45,7 +45,7 @@ same either way.
 | `--out-dir DIR` | Where to write the table (default `Experimental tables`). |
 | `--skip EXPR` | Leave rows out of the table; repeatable. See [Skipping rows](#skipping-rows). |
 | `--max-work N` | Give up on a cell after `N` work units; `0` is unlimited. See [Bounding the work per cell](#bounding-the-work-per-cell). |
-| `--memo-cap N` | Hold at most `N` memoized `e_m` values, dropping the least recently used; `0` is unlimited. See [Bounding the memo](#bounding-the-memo). |
+| `--memo-cap N` | Hold at most `N` memoized `e_m` values, dropping the least recently used; `0` is unlimited. A `K`/`M`/`G`/`T` suffix reads `N` as bytes instead. See [Bounding the memo](#bounding-the-memo). |
 | `--no-file` | Print progress only; write nothing. |
 | `--quiet` | Suppress per-value progress output. |
 | `--method WHICH` | `bottom-up` (default) or `top-down`. See [How the search works](#how-the-search-works). |
@@ -164,8 +164,18 @@ evicts the least recently used.
 ./build/egz-solver --ring F_4 --memo-cap 20000000
 ```
 
-The cap counts entries, not bytes, so the footprint per entry depends on the ring;
-measure an uncapped run and scale from there rather than deriving a number.
+A bare `N` counts entries. With a `K`, `M`, `G` or `T` suffix it is bytes
+instead -- binary, and `KB` and `KiB` both mean 1024 -- which the solver divides
+by what one entry costs on the ring in hand:
+
+```sh
+./build/egz-solver --ring F_4 --memo-cap 8G
+```
+
+That division is close but not exact. Every entry really is the same size, since
+a `sequence` always holds `order` ints, but what the allocator adds per block is
+a guess. Treat a byte cap as a target the memo aims at, not a ceiling the process
+cannot cross, as the ring tables and the runtime are outside it.
 
 Eviction never changes an answer -- a miss recomputes the value -- so a capped
 run produces the same table as an uncapped one, only slower. The two budgets do
