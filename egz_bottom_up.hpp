@@ -15,30 +15,20 @@
 #define EGZ_MAX_LEVEL 1600000000ULL
 #endif
 
-// Computes EGZ(t, m) by working up from level t. The default search;
-// egz_top_down.hpp holds the other one.
+// Computes EGZ(t, m) by working up from level t. The default search.
 //
 //   level t      which multisets of size t have e_m = 0
 //   level t+1    which multisets of size t+1 contain one of those
 //   ...
 //
-// It stops at the first level where every multiset is covered, and that level
-// is EGZ(t, m). The step is exact and cheap because for |S| > t,
+// It stops at the first level where every multiset is covered, and that level is EGZ(t, m). The step is exact and cheap because for |S| >
+// t,
 //
-//   S is covered  <=>  S - x is covered for some x in S
+// Only *which* e_m vanish ever matters, never their values, and every multiset of every level is visited, where the top-down search can
+// stop at the first counterexample. Visiting everything still wins in memory, because nothing is ever re-derived, but by a small margin.
 //
-// (<=) a good subsequence of S - x is one of S. (=>) if T is a good subsequence
-// of S then some x has more copies in S than in T, so T survives in S - x. A
-// level is therefore one pass over its multisets -- no search, no backtracking.
-//
-// Two consequences: only *which* e_m vanish ever matters, never their values;
-// and every multiset of every level is visited, where the top-down search can
-// stop at the first counterexample. Visiting everything still wins, because
-// nothing is ever re-derived -- see "How the search works" in README.md.
-//
-// This shares nothing with the top-down search but `sequence` and the ring.
-// The duplication is deliberate: two implementations that agree are evidence,
-// one implementation called twice is not.
+// The implementation shares nothing with the top-down search but `sequence` and the ring.
+
 template <typename R>
 class BottomUpEGZSolver {
 private:
@@ -48,14 +38,13 @@ private:
   bool aborted = false;
   unsigned long long peak_level = 0;
 
-  // Split of the work between the two halves, over the solver's lifetime: is
-  // the cost in finding which e_m vanish, or in climbing the levels above? The
-  // code does not say, and the answer decides where optimisation goes.
+  // Split of the work between the two halves, over the solver's lifetime: is the cost in finding which e_m vanish, or in climbing the
+  // levels above? The code does not say, and the answer decides where optimisation goes.
   double em_ms = 0, climb_ms = 0;
   unsigned long long em_cells = 0, climb_cells = 0;
 
-  // Saturating Pascal's triangle. A wrapped binomial would give a plausible
-  // rank pointing at the wrong multiset; a saturated one trips the size guard.
+  // Saturating Pascal's triangle. A wrapped binomial would give a plausible rank pointing at the wrong multiset; a saturated one trips the
+  // size guard.
   static constexpr unsigned long long BINOM_MAX = ~0ULL / 2;
   std::vector<std::vector<unsigned long long>> binom;
 
@@ -81,16 +70,14 @@ private:
   // Number of multisets of size s over R::order elements.
   unsigned long long levelSize(int s) const { return binom[s + R::order - 1][R::order - 1]; }
 
-  // Position of c among the compositions of l, in the ascending lexicographic
-  // order nextComposition walks. That order makes a multiset's own rank the
-  // loop counter, so this is only needed for its predecessors one level down.
+  // Position of c among the compositions of l, in the ascending lexicographic order nextComposition walks. That order makes a multiset's
+  // own rank the loop counter, so this is only needed for its predecessors one level down.
   unsigned long long rankOf(const std::vector<int> &c, int l) const {
     const int k = R::order;
     unsigned long long r = 0;
     int rem = l;
     for (int i = 0; i + 1 < k; i++) {
-      // Compositions of `rem` with part i below c[i], by the hockey stick
-      // identity rather than a loop.
+      // Compositions of `rem` with part i below c[i], by the hockey stick identity rather than a loop.
       const int p = k - i - 1;
       r += binom[rem + p][p] - binom[rem - c[i] + p][p];
       rem -= c[i];
@@ -143,13 +130,7 @@ private:
   }
 
 public:
-  // Largest level this will hold, as a multiset count; two are live at once at
-  // one bit each, so the default is about 200 MB.
-  //
-  // Deliberately generous. Levels look like where the memory goes, but on a
-  // Z_7 sweep they came to 796 KiB against 375 MiB of e_m memo -- they only
-  // overtake it on a large ring with a large answer. A cap tight enough to
-  // feel safe just abandons cells this could have done. Override with
+  // Largest level this will hold, as a multiset count; two are live at once at one bit each, so the default is about 200 MB. Override with
   // -DEGZ_MAX_LEVEL= to trade memory for reach.
   static constexpr unsigned long long MAX_LEVEL_SIZE = EGZ_MAX_LEVEL;
 
@@ -157,9 +138,8 @@ public:
 
   long long lastWork() const { return work; }
 
-  // Memoized e_m results held. Unlike the top-down search, not where the
-  // memory goes: only level t consults e_m, so this stops growing once the
-  // sweep starts climbing.
+  // Memoized e_m results held. Unlike the top-down search, not where the memory goes: only level t consults e_m, so this stops growing once
+  // the sweep starts climbing.
   size_t memoEntries() const {
     size_t total = 0;
     for (const auto &table : memorized_e_m)
@@ -167,29 +147,21 @@ public:
     return total;
   }
 
-  // Multisets in the largest level allocated, over the solver's lifetime; two
-  // are live at once at one bit each, so about peakLevel() / 4 bytes. The cost
-  // the top-down search does not pay, and why this one has a ceiling.
+  // Multisets in the largest level allocated, over the solver's lifetime; two are live at once at one bit each, so about peakLevel() / 4
+  // bytes. The cost the top-down search does not pay, and why this one has a ceiling.
   unsigned long long peakLevel() const { return peak_level; }
 
-  // Where the time goes: level t against every level above it.
   double emMs() const { return em_ms; }
   double climbMs() const { return climb_ms; }
   unsigned long long emCells() const { return em_cells; }
   unsigned long long climbCells() const { return climb_cells; }
 
-  // Same contract as the top-down search: 0 when no EGZ constant exists,
-  // EGZ_ABANDONED when --max-work, the level cap, or memory stopped it early.
-  // A work unit here is one multiset visited, not what the top-down search
-  // charges, so --max-work means different things to the two.
+  // Same contract as the top-down search: 0 when no EGZ constant exists, EGZ_ABANDONED when --max-work, the level cap, or memory stopped it
+  // early. A work unit here is one multiset visited, not what the top-down search charges, so --max-work means different things to the two.
   //
-  // MAX_LEVEL_SIZE bounds a level; nothing bounds the memo, which grows with
-  // every cell and is never dropped because that reuse is most of the speed. A
-  // Z_8 sweep peaks near 12 GB, and a failed allocation there used to abort the
-  // process, losing every row after the cell as well as the cell itself. Out of
-  // memory is a cell this search cannot do, which is what EGZ_ABANDONED already
-  // means. The memo goes with it: holding a cache no later cell can afford
-  // would abandon those too.
+  // MAX_LEVEL_SIZE bounds a level; nothing bounds the memo, which grows with every cell and is never dropped because that reuse is most of
+  // the speed. Out of memory is a cell this search cannot do, which is what EGZ_ABANDONED means. The memo goes with it: holding a cache no
+  // later cell can afford would abandon those too.
   int EGZ(int t, int m) {
     try {
       return search(t, m);
@@ -197,18 +169,16 @@ public:
       dropMemo();
       return EGZ_ABANDONED;
     } catch (const std::length_error &) {
-      // A level too large for vector<bool> to index. Only reachable past
-      // MAX_LEVEL_SIZE, but the same answer.
+      // A level too large for vector<bool> to index. Only reachable past MAX_LEVEL_SIZE, but the same answer.
       dropMemo();
       return EGZ_ABANDONED;
     }
   }
 
 private:
-  // Frees the memo, keeping the per-m indexing. Runs from the catch handler
-  // above, so it must not allocate: a fresh table to swap in would ask for the
-  // memory it is releasing, and a throw out of a catch handler is the abort
-  // being avoided. clear() only releases, and the nodes are where memory is.
+  // Frees the memo, keeping the per-m indexing. Runs from the catch handler above, so it must not allocate: a fresh table to swap in would
+  // ask for the memory it is releasing, and a throw out of a catch handler is the abort being avoided. clear() only releases, and the nodes
+  // are where memory is.
   void dropMemo() {
     for (auto &table : memorized_e_m)
       table.clear();
@@ -225,9 +195,8 @@ private:
     if (t < 1)
       return 0;
 
-    // The same first question the top-down search asks. If e_m of t copies of
-    // 1 is not zero, then 1, 1, 1, ... is a counterexample of every length: no
-    // constant exists, and the level loop below would never terminate.
+    // The same first question the top-down search asks. If e_m of t copies of 1 is not zero, then 1, 1, 1, ... is a counterexample of every
+    // length: no constant exists, and the level loop below would never terminate.
     sequence<R> t_ones;
     t_ones.insert(R::unit, t);
     R em = e_m(t_ones, m);
@@ -236,17 +205,15 @@ private:
     if (em != 0)
       return 0;
 
-    // Levels are indexed by rank, so the binomials must reach the largest level
-    // considered. That bound is what makes the search finite: past it, every
-    // multiset repeats an element too often for the answer to still be open.
+    // Levels are indexed by rank, so the binomials must reach the largest level considered. That bound is what makes the search finite:
+    // past it, every multiset repeats an element too often for the answer to still be open.
     const int maxLevel = T_MAX() + M_MAX() + k + 2;
     buildBinom(maxLevel + k + 2);
 
     if (levelSize(t) > MAX_LEVEL_SIZE)
       return EGZ_ABANDONED;
 
-    // Level t: covered means e_m is zero. The only place values are looked at;
-    // everything above is pure set arithmetic.
+    // Level t: covered means e_m is zero. The only place values are looked at; everything above is pure set arithmetic.
     peak_level = std::max(peak_level, levelSize(t));
     std::chrono::steady_clock::time_point em_start = std::chrono::steady_clock::now();
     std::vector<bool> cur((size_t)levelSize(t), false);
@@ -300,8 +267,7 @@ private:
 
 #ifdef DEBUG
       if (egz::verbose)
-        std::cout << "level l = " << l << ": " << coveredCount << " of " << idx << " covered, t = " << t
-                  << ", m = " << m << std::endl;
+        std::cout << "level l = " << l << ": " << coveredCount << " of " << idx << " covered, t = " << t << ", m = " << m << std::endl;
 #endif
       if (coveredCount == idx)
         return l;
