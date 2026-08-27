@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <iomanip>
 #include <iostream>
 #include <new>
 #include <stdexcept>
@@ -154,9 +155,9 @@ public:
   // Same contract as the top-down search: 0 when no EGZ constant exists, EGZ_ABANDONED when --max-work, the level cap, or memory stopped it
   // early. A work unit here is one multiset visited, not what the top-down search charges, so --max-work means different things to the two.
   //
-  // MAX_LEVEL_SIZE bounds a level and --memo-cap the memo, which otherwise grows with every cell and is never dropped because that reuse is
-  // most of the speed. Out of memory is a cell this search cannot do, which is what EGZ_ABANDONED means. The memo goes with it: holding a
-  // cache no later cell can afford would abandon those too.
+  // MAX_LEVEL_SIZE bounds a level and --memo-cap the memo, which otherwise grows with every cell and is never dropped because that reuse
+  // is most of the speed. Out of memory is a cell this search cannot do, which is what EGZ_ABANDONED means. The memo goes with it: holding
+  // a cache no later cell can afford would abandon those too.
   int EGZ(int t, int m) {
     try {
       return search(t, m);
@@ -259,7 +260,8 @@ private:
 
 #ifdef DEBUG
       if (egz::verbose)
-        std::cout << "level l = " << l << ": " << coveredCount << " of " << idx << " covered, t = " << t << ", m = " << m << std::endl;
+        std::cout << "level l = " << l << ": " << std::fixed << std::setprecision(2) << std::setw(5)
+                  << 100.0 * (float(coveredCount) / float(idx)) << "% covered, t = " << t << ", m = " << m << std::endl;
 #endif
       if (coveredCount == idx)
         return l;
