@@ -21,6 +21,12 @@ public:
   // Entries the cap works out to, for a caller that asked for one in bytes.
   unsigned long long capacity() const { return cap; }
 
+  // Lookups answered from the table, lookups that had to recurse, and entries dropped to stay under the cap. Lifetime tallies: a caller
+  // wanting one span's share takes a difference. What they measure is whether the cap is costing recomputation or only memory.
+  unsigned long long hitCount() const { return hits; }
+  unsigned long long missCount() const { return misses; }
+  unsigned long long evictionCount() const { return evictions; }
+
   // What one entry costs: a map node, the vector<int> its key owns, a bucket slot at load factor 1, and a recency node. Every entry is this
   // same size, since a sequence always holds R::order ints, so a byte budget is a plain divide. The per-allocation overhead is a guess at
   // what the platform's allocator adds, which makes a byte cap a target rather than an exact ceiling.
@@ -43,8 +49,11 @@ public:
   // Invalidated by the next insert().
   const R *find(int m, const sequence<R> &S) {
     auto it = tables[m].find(S);
-    if (it == tables[m].end())
+    if (it == tables[m].end()) {
+      misses++;
       return nullptr;
+    }
+    hits++;
     if (cap > 0)
       recency.splice(recency.end(), recency, it->second.at);
     return &it->second.value;
@@ -95,10 +104,12 @@ private:
     tables[recency.front().first].erase(key);
     recency.pop_front();
     entries--;
+    evictions++;
   }
 
   std::vector<std::unordered_map<sequence<R>, Entry>> tables;
   Recency recency;
   const unsigned long long cap;
   size_t entries = 0;
+  unsigned long long hits = 0, misses = 0, evictions = 0;
 };

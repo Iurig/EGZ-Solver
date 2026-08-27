@@ -1,8 +1,10 @@
 #include <cctype>
 #include <cstdlib>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "conditional_file_stream.hpp"
@@ -13,6 +15,64 @@
 #include "skip_rule.hpp"
 
 using namespace std;
+
+// Only the bottom-up search splits its time between e_m and the climb, so the reports below have to ask whether this Solver does. One
+// that does not track it reports zero, which reportSplit() then prints as nothing.
+template <typename S, typename = void>
+struct tracksSplit : false_type {};
+template <typename S>
+struct tracksSplit<S, void_t<decltype(declval<const S &>().emMs())>> : true_type {};
+
+template <typename S>
+double emMsOf(const S &s) {
+  if constexpr (tracksSplit<S>::value)
+    return s.emMs();
+  else
+    return 0;
+}
+
+template <typename S>
+double climbMsOf(const S &s) {
+  if constexpr (tracksSplit<S>::value)
+    return s.climbMs();
+  else
+    return 0;
+}
+
+static void reportSplit(const string &what, double em_ms, double climb_ms) {
+  double em = em_ms / 1000.0, climb = climb_ms / 1000.0;
+  if (em + climb <= 0)
+    return;
+  cerr << fixed << setprecision(1) << "time " << what << ": e_m " << em << " s (" << 100.0 * em / (em + climb) << "%), climb " << climb
+       << " s (" << 100.0 * climb / (em + climb) << "%)" << endl;
+}
+
+// Lookups and evictions accumulate over the solver's lifetime, so a row's share of them is a difference; occupancy is read as it stands.
+struct MemoCounts {
+  unsigned long long hits = 0, misses = 0, evictions = 0;
+};
+
+// Both searches memoize e_m, so neither of the two below needs the detection above.
+template <typename S>
+MemoCounts memoCountsOf(const S &s) {
+  return {s.memoHits(), s.memoMisses(), s.memoEvictions()};
+}
+
+template <typename S>
+void reportMemo(const string &what, const S &s, const MemoCounts &since) {
+  unsigned long long hits = s.memoHits() - since.hits, misses = s.memoMisses() - since.misses;
+  unsigned long long evicted = s.memoEvictions() - since.evictions, lookups = hits + misses;
+  cerr << "memo " << what << ": " << s.memoEntries() << " entries";
+  if (s.memoCapacity() > 0)
+    cerr << fixed << setprecision(1) << ", " << 100.0 * (double)s.memoEntries() / (double)s.memoCapacity() << "% of the "
+         << s.memoCapacity() << " cap";
+  else
+    cerr << " (uncapped)";
+  if (lookups > 0)
+    cerr << fixed << setprecision(1) << "; " << lookups << " lookups, " << 100.0 * (double)hits / (double)lookups << "% hit, " << evicted
+         << " evicted";
+  cerr << endl;
+}
 
 // Writes one table for ring R: rows are m, columns are t, and each cell holds EGZ(t, m) - t. See "Output format" in README.md.
 template <typename R, typename Solver>
@@ -38,6 +98,9 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
     // Each row is preceded by its newline, so omitting one leaves no gap and the file still ends without a trailing newline.
     output_file << "\n";
     output_file << m;
+    // The split accumulates over the solver's lifetime, so a row's share of it is a difference.
+    double row_em = emMsOf(s), row_climb = climbMsOf(s);
+    MemoCounts row_memo = memoCountsOf(s);
     // One tab before each cell, so a row ends without a trailing tab and is exactly T_MAX(m_max) - 1 cells wide.
     for (int t = 1; t < T_MAX(m_max); t++) {
       output_file << "\t";
@@ -65,6 +128,8 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
     // A row takes minutes and a table hours, so flush: an interrupted run then keeps every row it finished, not whatever was past the
     // buffer.
     output_file.flush();
+    reportSplit("m = " + to_string(m), emMsOf(s) - row_em, climbMsOf(s) - row_climb);
+    reportMemo("m = " + to_string(m), s, row_memo);
   }
 
   if (abandoned > 0) {
@@ -83,6 +148,9 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
       cerr << " " << m;
     cerr << endl;
   }
+  reportSplit("total", emMsOf(s), climbMsOf(s));
+  // Occupancy, not an accumulated total: what the memo held when the sweep ended.
+  reportMemo("final", s, MemoCounts{});
 }
 
 static void usage() {

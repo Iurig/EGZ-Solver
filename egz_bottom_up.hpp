@@ -143,6 +143,13 @@ public:
   // the sweep starts climbing.
   size_t memoEntries() const { return memorized_e_m.size(); }
 
+  // Entries --memo-cap works out to, so a caller can see how close the memo is to evicting; 0 when uncapped.
+  unsigned long long memoCapacity() const { return memorized_e_m.capacity(); }
+
+  unsigned long long memoHits() const { return memorized_e_m.hitCount(); }
+  unsigned long long memoMisses() const { return memorized_e_m.missCount(); }
+  unsigned long long memoEvictions() const { return memorized_e_m.evictionCount(); }
+
   // Multisets in the largest level allocated, over the solver's lifetime; two are live at once at one bit each, so about peakLevel() / 4
   // bytes. The cost the top-down search does not pay, and why this one has a ceiling.
   unsigned long long peakLevel() const { return peak_level; }

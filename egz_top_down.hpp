@@ -48,6 +48,13 @@ public:
   // by tests/compare_methods.cpp, since the two searches spend memory very differently.
   size_t memoEntries() const { return memorized_e_m.size(); }
 
+  // Entries --memo-cap works out to, so a caller can see how close the memo is to evicting; 0 when uncapped.
+  unsigned long long memoCapacity() const { return memorized_e_m.capacity(); }
+
+  unsigned long long memoHits() const { return memorized_e_m.hitCount(); }
+  unsigned long long memoMisses() const { return memorized_e_m.missCount(); }
+  unsigned long long memoEvictions() const { return memorized_e_m.evictionCount(); }
+
   sequence<R> subseq = sequence<R>();
   // Calculates e_m(S)
   R e_m(sequence<R> &S, int m) {
