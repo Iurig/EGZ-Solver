@@ -54,6 +54,7 @@ public:
   unsigned long long memoHits() const { return memorized_e_m.hitCount(); }
   unsigned long long memoMisses() const { return memorized_e_m.missCount(); }
   unsigned long long memoEvictions() const { return memorized_e_m.evictionCount(); }
+  unsigned long long memoBuckets() const { return memorized_e_m.bucketCount(); }
 
   sequence<R> subseq = sequence<R>();
   // Calculates e_m(S)

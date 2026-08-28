@@ -39,6 +39,28 @@ double climbMsOf(const S &s) {
     return 0;
 }
 
+template <typename S, typename = void>
+struct tracksLevels : false_type {};
+template <typename S>
+struct tracksLevels<S, void_t<decltype(declval<const S &>().peakLevel())>> : true_type {};
+
+template <typename S>
+unsigned long long peakLevelOf(const S &s) {
+  if constexpr (tracksLevels<S>::value)
+    return s.peakLevel();
+  else
+    return 0;
+}
+
+// The largest level held so far, which is the climb's whole memory: one bit per multiset, two levels live at once. A lifetime high-water
+// mark rather than a per-row figure, so a row that does not raise it reprints the same number.
+static void reportLevels(const string &what, unsigned long long peak) {
+  if (peak == 0)
+    return;
+  cerr << fixed << setprecision(1) << "level " << what << ": peak " << peak << " multisets, " << (double)peak / 8.0 / 1e6
+       << " MB per level, " << 2.0 * (double)peak / 8.0 / 1e6 << " MB live" << endl;
+}
+
 static void reportSplit(const string &what, double em_ms, double climb_ms) {
   double em = em_ms / 1000.0, climb = climb_ms / 1000.0;
   if (em + climb <= 0)
@@ -68,6 +90,7 @@ void reportMemo(const string &what, const S &s, const MemoCounts &since) {
          << s.memoCapacity() << " cap";
   else
     cerr << " (uncapped)";
+  cerr << "; " << s.memoBuckets() << " buckets";
   if (lookups > 0)
     cerr << fixed << setprecision(1) << "; " << lookups << " lookups, " << 100.0 * (double)hits / (double)lookups << "% hit, " << evicted
          << " evicted";
@@ -130,6 +153,7 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
     output_file.flush();
     reportSplit("m = " + to_string(m), emMsOf(s) - row_em, climbMsOf(s) - row_climb);
     reportMemo("m = " + to_string(m), s, row_memo);
+    reportLevels("m = " + to_string(m), peakLevelOf(s));
   }
 
   if (abandoned > 0) {
@@ -151,6 +175,7 @@ void findEGZs(int m_max, int m_min, const string &out_dir, bool to_file, bool qu
   reportSplit("total", emMsOf(s), climbMsOf(s));
   // Occupancy, not an accumulated total: what the memo held when the sweep ended.
   reportMemo("final", s, MemoCounts{});
+  reportLevels("final", peakLevelOf(s));
 }
 
 static void usage() {
@@ -177,11 +202,11 @@ static void usage() {
        << "                  Skipped rows are omitted, not written blank.\n"
        << "  --max-work N    give up on a cell after N work units (0 = no limit).\n"
        << "                  Abandoned cells are written as ?, never left blank.\n"
-       << "  --memo-cap N    hold at most N memoized e_m values, dropping one not\n"
-       << "                  read lately (0 = no limit). A K/M/G/T suffix\n"
-       << "                  reads N as bytes instead (--memo-cap 8G), which is an\n"
-       << "                  estimate, not an exact ceiling. A recomputed value is\n"
-       << "                  charged to --max-work again.\n"
+       << "  --memo-cap N    hold at most N memoized e_m values, dropping one not read\n"
+       << "                  lately (0 = no limit; default 8G). A K/M/G/T suffix\n"
+       << "                  reads N as bytes instead, which is an estimate, not\n"
+       << "                  an exact ceiling. A recomputed value is charged to\n"
+       << "                  --max-work again.\n"
        << "  --method WHICH  bottom-up (default) or top-down: two independent\n"
        << "                  searches that agree. top-down is slower but has no\n"
        << "                  ceiling on memory. See README.md.\n"

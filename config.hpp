@@ -15,9 +15,15 @@
 #define EGZ_T_MAX 25
 #endif
 
-// Entries the e_m memo may hold before evicting the least recently used; 0 is unlimited.
+// Entries the e_m memo may hold before one not read lately is evicted; 0 is unlimited.
 #ifndef EGZ_MEMO_CAP
 #define EGZ_MEMO_CAP 0
+#endif
+
+// The same cap in bytes, which takes precedence when set. A default rather than 0, because the memo is otherwise bounded only by the ring:
+// an unlucky sweep will take every byte the machine has and then page. 8 GiB fits a 16 GB machine with room to work in.
+#ifndef EGZ_MEMO_BYTES
+#define EGZ_MEMO_BYTES (8ULL * 1024 * 1024 * 1024)
 #endif
 
 namespace egz {
@@ -27,7 +33,7 @@ inline int t_max = EGZ_T_MAX;
 inline long long max_work = 0;
 inline unsigned long long memo_cap = EGZ_MEMO_CAP;
 // A byte budget for the same memo, converted to an entry cap when the table is built; 0 leaves memo_cap in charge.
-inline unsigned long long memo_bytes = 0;
+inline unsigned long long memo_bytes = EGZ_MEMO_BYTES;
 // Gates the DEBUG progress tracing in egz_top_down.hpp (see --quiet).
 inline bool verbose = true;
 } // namespace egz

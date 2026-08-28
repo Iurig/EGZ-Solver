@@ -149,6 +149,7 @@ public:
   unsigned long long memoHits() const { return memorized_e_m.hitCount(); }
   unsigned long long memoMisses() const { return memorized_e_m.missCount(); }
   unsigned long long memoEvictions() const { return memorized_e_m.evictionCount(); }
+  unsigned long long memoBuckets() const { return memorized_e_m.bucketCount(); }
 
   // Multisets in the largest level allocated, over the solver's lifetime; two are live at once at one bit each, so about peakLevel() / 4
   // bytes. The cost the top-down search does not pay, and why this one has a ceiling.

@@ -45,7 +45,7 @@ same either way.
 | `--out-dir DIR` | Where to write the table (default `Experimental tables`). |
 | `--skip EXPR` | Leave rows out of the table; repeatable. See [Skipping rows](#skipping-rows). |
 | `--max-work N` | Give up on a cell after `N` work units; `0` is unlimited. See [Bounding the work per cell](#bounding-the-work-per-cell). |
-| `--memo-cap N` | Hold at most `N` memoized `e_m` values, dropping one not read lately; `0` is unlimited. A `K`/`M`/`G`/`T` suffix reads `N` as bytes instead. See [Bounding the memo](#bounding-the-memo). |
+| `--memo-cap N` | Hold at most `N` memoized `e_m` values, dropping one not read lately; `0` is unlimited, and the default is `8G`. A `K`/`M`/`G`/`T` suffix reads `N` as bytes instead. See [Bounding the memo](#bounding-the-memo). |
 | `--no-file` | Print progress only; write nothing. |
 | `--quiet` | Suppress per-value progress output. |
 | `--method WHICH` | `bottom-up` (default) or `top-down`. See [How the search works](#how-the-search-works). |
@@ -155,10 +155,12 @@ budget can only turn `?` into a value, never alter one.
 
 ## Bounding the memo
 
-Both searches memoize every `e_m` they evaluate, and by default keep all of it:
-the reuse is most of the speed. On a large ring that memo is where the memory
-goes, and `--memo-cap N` bounds it -- once it holds `N` entries, each new entry
-evicts one that has not been read lately.
+Both searches memoize every `e_m` they evaluate, and the reuse is most of the
+speed. On a large ring that memo is where the memory goes, so it is capped at
+**8 GiB by default** -- once it holds that many entries, each new entry evicts
+one that has not been read lately. `--memo-cap 0` lifts the cap entirely, which
+is worth knowing before running one: nothing else bounds the memo but the ring,
+and a large sweep will take every byte the machine has and then page.
 
 Eviction is second-chance rather than exact LRU: a hit sets a bit on the entry,
 and a hand sweeping the entries evicts the first it finds with the bit clear,
@@ -181,7 +183,13 @@ by what one entry costs on the ring in hand:
 
 That division is close but not exact. Every entry really is the same size, since
 a `sequence` always holds `order` ints, but what the allocator adds per block is
-a guess, calibrated by measuring a full memo against its cap. Treat a byte cap as a target the memo aims at, not a ceiling the process
+a guess, calibrated by measuring a full memo against its cap. Buckets are the
+term that matters -- an `unordered_map` holds one per entry and MSVC spends two
+list iterators on each -- which is why the memo is a single table keyed on `m`
+and the sequence together rather than one table per `m`. Per-degree tables
+ratchet: each grows its bucket array in turn and keeps it after eviction empties
+it, reaching 16x the entry count on a `Z_6` sweep and costing gigabytes that no
+byte cap accounted for. Treat a byte cap as a target the memo aims at, not a ceiling the process
 cannot cross, as the ring tables and the runtime are outside it.
 
 Eviction never changes an answer -- a miss recomputes the value -- so a capped
