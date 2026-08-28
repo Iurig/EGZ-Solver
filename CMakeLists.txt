@@ -94,8 +94,8 @@ add_test(NAME oom_guard COMMAND test_oom_guard)
 # that computes rather than reads.
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
-  add_test(NAME thesis_verification
-           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/verify_against_thesis.py
+  add_test(NAME literature_verification
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/verify_against_literature.py
                    --tables "${CMAKE_CURRENT_SOURCE_DIR}/Experimental tables"
                    --solver $<TARGET_FILE:egz-solver>)
 
@@ -122,7 +122,7 @@ if(Python3_Interpreter_FOUND)
                    --goldens ${CMAKE_CURRENT_SOURCE_DIR}/tests/ring_goldens.tsv
                    --solver $<TARGET_FILE:egz-solver>)
 else()
-  message(STATUS "Python3 not found; skipping the thesis_verification test")
+  message(STATUS "Python3 not found; skipping the literature_verification test")
 endif()
 
 foreach(t egz-solver run_regression table_probe dump_ring compare_methods test_oom_guard)
