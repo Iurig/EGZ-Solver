@@ -13,7 +13,7 @@
 #include "sequence.hpp"
 
 #ifndef EGZ_MAX_LEVEL
-#define EGZ_MAX_LEVEL 1600000000ULL
+#define EGZ_MAX_LEVEL 4000000000ULL
 #endif
 
 // Computes EGZ(t, m) by working up from level t. The default search.
@@ -131,7 +131,7 @@ private:
   }
 
 public:
-  // Largest level this will hold, as a multiset count; two are live at once at one bit each, so the default is about 200 MB. Override with
+  // Largest level this will hold, as a multiset count; two are live at once at one bit each, so the default is about 500 MB each. Override with
   // -DEGZ_MAX_LEVEL= to trade memory for reach.
   static constexpr unsigned long long MAX_LEVEL_SIZE = EGZ_MAX_LEVEL;
 
