@@ -71,12 +71,11 @@ written out directly, so you can compute one without recompiling:
 
 Each variable needs exactly one relation, in that variable alone. A relation
 needs degree at least 1 and a leading coefficient invertible mod `n`; a zero
-divisor there leaves a ring the solver cannot compute in, and it says so rather
-than guessing. Coefficients may be written with `-`, and `x^2` and `x2` are both
-accepted.
+divisor there leaves a ring the solver cannot compute in, which it will warn about.
+Coefficients may be written with `-`, and `x^2` and `x2` are both accepted.
 
-A relation tying variables together — `(xy-1)`, `(x^2-y)` — is rejected rather
-than approximated. Those need a Gröbner basis, which this does not have.
+A relation tying variables together — `(xy-1)`, `(x^2-y)` — won't work. Those need
+a Gröbner basis, which this does not have.
 
 The ring has `n^(d1 * ... * dk)` elements, for relation degrees `d1 .. dk`, and
 that is the number to watch: cost climbs steeply with it, and anything past 256
@@ -219,7 +218,9 @@ Worth knowing before running anything large:
 **Memory has a ceiling.** Two levels are live at a time, one bit per multiset,
 and a level of size `l` over a ring of order `k` holds `C(l + k - 1, k - 1)` of
 them. Past `EGZ_MAX_LEVEL` the solver writes `?` rather than trying to allocate.
-The default admits about 200 MB of levels to allow for the rest being allocated 
+The default admits about 500 MB per level, so 1 GB for the two live at once,
+which is what an order-9 ring needs: its levels pass 200 MB by level 48, and a
+ceiling that stops there turns computable cells into `?`. The rest is allocated 
 for `e_m`. This is editable.
 
 For most rings none of this binds: on a `Z_7` sweep the levels came to 796 KiB
