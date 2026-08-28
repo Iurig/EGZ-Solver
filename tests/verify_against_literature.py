@@ -65,6 +65,8 @@ RINGS = {
     "EGZ_Z_2^3.tsv": dict(
         order=8, char=2, cyclic=None, t_limit=FLAT, additive=("Z_2^d", 3), dav=4
     ),
+    # Elementary abelian of rank 2: order 9, characteristic 3 -- not Z_9.
+    "EGZ_Z_3^2.tsv": dict(order=9, char=3, cyclic=None, t_limit=FLAT, additive=("Z_3^d", 2), dav=5),
     # 4-element rings of characteristic 2 -- not Z_4.
     "EGZ_Z_2^2.tsv": dict(
         order=4, char=2, cyclic=None, t_limit=FLAT, additive=("Z_2^d", 2), dav=3
