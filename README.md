@@ -286,7 +286,7 @@ $\binom{t}{m} \equiv 0 \pmod n$ and is blank otherwise, which is a useful sanity
 check on a generated table.
 
 All 7,175 such cells across the committed $ℤ_n$ tables satisfy that criterion;
-`tests/verify_against_thesis.py` checks it, along with the rule that everything
+`tests/verify_against_literature.py` checks it, along with the rule that everything
 outside a computed range carries `?`.
 
 Every table is computed to the full width of its header, so the only `?` in the
@@ -317,8 +317,9 @@ Ten suites run, in a few seconds:
    [two searches](#the-other-search).
  - `methods_agree` and `methods_agree_f4` run both searches over every cell of a
    small sweep and fail on any disagreement.
- - `thesis_verification` checks the committed tables against the theorems proved
-   in the accompanying thesis.
+ - `literature_verification` checks the committed tables against the theorems
+   proved in the accompanying thesis and classical zero-sum results from the
+   wider literature.
  - `rings` checks the rings themselves: ring axioms, and that each quotient
    reproduces the built-in ring it generalises.
  - `skip_rules`, `max_work` and `memo_cap` drive those three options through the

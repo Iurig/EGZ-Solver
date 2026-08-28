@@ -184,19 +184,21 @@ vanish and climbing the levels above. That last line is the one to read before
 optimising anything -- it is 61-72% `e_m` on every ring measured, even though
 the climb visits about ten times as many multisets.
 
-## Verifying against the published theorems
+## Verifying against the literature
 
-`verify_against_thesis.py` checks the committed tables against the results
-proved in the accompanying thesis. Each theorem is restated in the docstring of
+`verify_against_literature.py` checks the committed tables against the results
+proved in the accompanying thesis, plus classical zero-sum theorems from the
+wider literature, which reach the degree-1 rows -- higher degrees are what the
+thesis itself contributes. Each theorem is restated in the docstring of
 the function that applies it, so the script is self-contained: no PDF, no build,
 no third-party packages.
 
 ```sh
-python tests/verify_against_thesis.py
-python tests/verify_against_thesis.py --solver build/egz-solver   # adds Thm 2.2
+python tests/verify_against_literature.py
+python tests/verify_against_literature.py --solver build/egz-solver   # adds Thm 2.2
 ```
 
-It runs under `ctest` as `thesis_verification`, and exits non-zero if any check
+It runs under `ctest` as `literature_verification`, and exits non-zero if any check
 fails. What it covers:
 
 | Check | Kind | Cells |
@@ -211,6 +213,11 @@ fails. What it covers:
 | Thm 3.9 — Caro-Schmitt bound | upper bound | 3,289 |
 | Thm 3.8 — ring-only bound | upper bound | 5,188 |
 | Thm 2.2 — `Z_2`, every `m` (needs `--solver`) | exact | 242 |
+| EGZ 1961 / Harborth 1973 / Reiher 2007 — `s(G)` at `(1, exp)` | exact | 1 per table |
+| Gao 1996 + Olson 1969 — `m = 1` tail equals `D(G) - 1` | exact | 201 |
+| Davenport lower bound — `m = 1` cells at least `D(G) - 1` | lower bound | 207 |
+| Caro–Schmitt 2022 — `Z_3` degree 3 at `t = 3^a` | upper bound | 2 |
+| Additive groups agree on `m = 1` (`F_4` vs `Z_2^2` vs `Z_2[x]/x^2`) | cross-table | 134 |
 
 Theorems 3.4 and 3.5 between them account for every one of the 866 value-holding
 cells of `EGZ_Z_4.tsv`, so that table is confirmed in full.

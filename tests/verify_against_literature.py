@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Verify the published tables in Experimental tables/ against the thesis results.
+"""Verify the published tables in Experimental tables/ against the literature.
 
-Each check restates a thesis result and applies it to the committed data. The
-theorem statements are inlined, so this needs only the .tsv files -- no PDF, no
-build, no third-party packages.
+Most checks restate a result from the thesis; the rest apply classical zero-sum
+theorems from the wider literature, which reach only the degree-1 rows -- higher
+degrees are what the thesis itself contributes. Every statement is inlined, so
+this needs only the .tsv files.
 
-    python tests/verify_against_thesis.py                  # table checks only
-    python tests/verify_against_thesis.py --solver build/egz-solver
+    python tests/verify_against_literature.py              # table checks only
+    python tests/verify_against_literature.py --solver build/egz-solver
 
 Exits 0 if every check passes, 1 otherwise.
 """
@@ -34,18 +35,53 @@ FLAT = None
 # Distinct from blank, which means "no EGZ constant exists".
 ABANDONED = "?"
 
+# `additive` names the ring's additive group, which is all degree 1 sees; rings
+# sharing it are checked against the same group-theoretic results and against
+# each other. `dav` is its Davenport constant: n for Z_n, and 1 + sum(p^e - 1)
+# for p-groups (Olson 1969).
 RINGS = {
-    "EGZ_Z_3.tsv": dict(order=3, char=3, cyclic=3, t_limit=FLAT),
-    "EGZ_Z_4.tsv": dict(order=4, char=4, cyclic=4, t_limit=FLAT),
-    "EGZ_Z_5.tsv": dict(order=5, char=5, cyclic=5, t_limit=FLAT),
-    "EGZ_Z_6.tsv": dict(order=6, char=6, cyclic=6, t_limit=FLAT),
-    "EGZ_Z_7.tsv": dict(order=7, char=7, cyclic=7, t_limit=FLAT),
-    "EGZ_Z_8.tsv": dict(order=8, char=8, cyclic=8, t_limit=FLAT),
+    "EGZ_Z_3.tsv": dict(
+        order=3, char=3, cyclic=3, t_limit=FLAT, additive=("Z_n", 3), dav=3
+    ),
+    "EGZ_Z_4.tsv": dict(
+        order=4, char=4, cyclic=4, t_limit=FLAT, additive=("Z_n", 4), dav=4
+    ),
+    "EGZ_Z_5.tsv": dict(
+        order=5, char=5, cyclic=5, t_limit=FLAT, additive=("Z_n", 5), dav=5
+    ),
+    "EGZ_Z_6.tsv": dict(
+        order=6, char=6, cyclic=6, t_limit=FLAT, additive=("Z_n", 6), dav=6
+    ),
+    "EGZ_Z_7.tsv": dict(
+        order=7, char=7, cyclic=7, t_limit=FLAT, additive=("Z_n", 7), dav=7
+    ),
+    "EGZ_Z_8.tsv": dict(
+        order=8, char=8, cyclic=8, t_limit=FLAT, additive=("Z_n", 8), dav=8
+    ),
+    "EGZ_Z_9.tsv": dict(
+        order=9, char=9, cyclic=9, t_limit=FLAT, additive=("Z_n", 9), dav=9
+    ),
+    # Elementary abelian of rank 3: order 8, characteristic 2 -- not Z_8.
+    "EGZ_Z_2^3.tsv": dict(
+        order=8, char=2, cyclic=None, t_limit=FLAT, additive=("Z_2^d", 3), dav=4
+    ),
     # 4-element rings of characteristic 2 -- not Z_4.
-    "EGZ_Z_2^2.tsv": dict(order=4, char=2, cyclic=None, t_limit=FLAT),
-    "EGZ_F_4.tsv": dict(order=4, char=2, cyclic=None, t_limit=FLAT),
-    "EGZ_Z_2x_by_x2.tsv": dict(order=4, char=2, cyclic=None, t_limit=FLAT),
+    "EGZ_Z_2^2.tsv": dict(
+        order=4, char=2, cyclic=None, t_limit=FLAT, additive=("Z_2^d", 2), dav=3
+    ),
+    "EGZ_F_4.tsv": dict(
+        order=4, char=2, cyclic=None, t_limit=FLAT, additive=("Z_2^d", 2), dav=3
+    ),
+    "EGZ_Z_2x_by_x2.tsv": dict(
+        order=4, char=2, cyclic=None, t_limit=FLAT, additive=("Z_2^d", 2), dav=3
+    ),
 }
+
+
+def exponent(meta):
+    """Exponent of the additive group: n for Z_n, p for an elementary p-group."""
+    kind, n = meta["additive"]
+    return n if kind == "Z_n" else int(kind[2])
 
 
 def is_prime(n):
@@ -346,6 +382,162 @@ def check_theorem_3_8(tables, rep):
     )
 
 
+# --- literature, higher degree ----------------------------------------------
+def check_caro_schmitt_mod3(tables, rep):
+    """Caro-Schmitt (Integers 22, 2022), the mod 3 theorem: for k = 3^a, a >= 2,
+    EGZ(k, Z_3, 3) <= k + 6. The only outside bound reaching m >= 2 beyond
+    Thm 3.9 and Thm 2.2, which are also theirs. Sharp: the table holds 6."""
+    path = dict(tables).get("EGZ_Z_3.tsv")
+    if path is None:
+        return
+    row = load(path).get(3, {})
+    checked = viol = 0
+    k = 9
+    while k in row:
+        checked += 1
+        if row[k] > 6:
+            viol += 1
+        k *= 3
+    rep.add(
+        "Caro-Schmitt  Z_3 degree 3, t = 3^a",
+        viol == 0,
+        f"{checked} cells, {viol} violations",
+    )
+
+
+# --- literature, degree 1 --------------------------------------------------
+# EGZ(t, R, 1) - t is the classical zero-sum constant s_t(G) - t of the additive
+# group G of R: e_1 is the plain sum. These checks apply results from the wider
+# zero-sum literature to that row; higher degrees have no literature to compare
+# against, being what the thesis contributes.
+def check_egz_constants(tables, rep):
+    """s(G), the EGZ constant proper, sits at (m=1, t=exp(G)) as s(G) - exp(G).
+    Known exactly for every additive group here:
+      s(Z_n)   = 2n - 1      Erdos-Ginzburg-Ziv 1961
+      s(Z_2^d) = 2^d + 1     Harborth 1973
+      s(Z_p^2) = 4p - 3      Kemnitz's conjecture, proved by Reiher 2007
+    """
+    ok = bad = 0
+    fails = []
+    for name, path in tables:
+        meta = RINGS[name]
+        kind, n = meta["additive"]
+        if kind == "Z_n":
+            s_g = 2 * n - 1
+        elif kind.endswith("^d") and int(kind[2]) == 2:
+            s_g = 2**n + 1
+        elif kind.endswith("^d") and n == 2:
+            s_g = 4 * int(kind[2]) - 3
+        else:
+            continue
+        e = exponent(meta)
+        got = load(path).get(1, {}).get(e)
+        if got == s_g - e:
+            ok += 1
+        else:
+            bad += 1
+            fails.append(f"{name}: got {got} want {s_g - e}")
+    rep.add(
+        "EGZ/Harborth/Reiher  s(G) at (1, exp)",
+        bad == 0,
+        f"{ok} tables confirmed, {bad} disagree"
+        + ("  " + "; ".join(fails[:3]) if fails else ""),
+    )
+
+
+def check_gao_davenport(tables, rep):
+    """Gao 1996: for exp(G) | t and t >= |G|,  s_t(G) = t + D(G) - 1. With
+    Olson's Davenport constants this pins the whole tail of every m = 1 row.
+    Wrongly blank cells in the domain are the blank-rule check's to catch."""
+    ok = bad = 0
+    fails = []
+    for name, path in tables:
+        meta = RINGS[name]
+        e, want = exponent(meta), meta["dav"] - 1
+        for t, v in load(path).get(1, {}).items():
+            if t % e or t < meta["order"]:
+                continue
+            if v == want:
+                ok += 1
+            else:
+                bad += 1
+                if len(fails) < 3:
+                    fails.append(f"{name} t={t}: got {v} want {want}")
+    rep.add(
+        "Gao+Olson  m=1 tail is D(G) - 1",
+        bad == 0,
+        f"{ok} cells confirmed, {bad} disagree"
+        + ("  " + "; ".join(fails) if fails else ""),
+    )
+
+
+def check_davenport_lower(tables, rep):
+    """The one classical lower bound: s_t(G) >= t + D(G) - 1 for every t, from
+    the standard construction -- a zero-sum-free sequence of length D(G) - 1
+    padded with t - 1 zeros has no length-t zero-sum. Gao pins the t >= |G|
+    cells exactly; this also reaches the small-t cells before that, where the
+    values sit strictly above the bound."""
+    checked = viol = 0
+    fails = []
+    for name, path in tables:
+        floor = RINGS[name]["dav"] - 1
+        for t, v in load(path).get(1, {}).items():
+            checked += 1
+            if v < floor:
+                viol += 1
+                if len(fails) < 3:
+                    fails.append(f"{name} t={t}: {v} < {floor}")
+    rep.add(
+        "Davenport lower bound on m=1",
+        viol == 0,
+        f"{checked} cells, {viol} violations" + ("  " + "; ".join(fails) if fails else ""),
+    )
+
+
+def check_additive_agreement(tables, rep):
+    """Degree 1 sees only (R, +), so rings with the same additive group must
+    produce identical m = 1 rows -- blanks included -- wherever both computed
+    them. Cross-checks F_4, Z_2^2 and Z_2[x]/(x^2) against each other."""
+
+    def raw_row_1(path):
+        raw = io.open(path, "rb").read().decode("utf-8")
+        for line in raw.splitlines()[1:]:
+            f = line.split("	")
+            if f and f[0] == "1":
+                return f
+        return None
+
+    groups = {}
+    for name, path in tables:
+        groups.setdefault(RINGS[name]["additive"], []).append((name, path))
+    ok = bad = 0
+    fails = []
+    for group in groups.values():
+        if len(group) < 2:
+            continue
+        base_name, base_path = group[0]
+        base = raw_row_1(base_path)
+        for name, path in group[1:]:
+            row = raw_row_1(path)
+            for t in range(1, min(len(base), len(row))):
+                if base[t] == ABANDONED or row[t] == ABANDONED:
+                    continue
+                if base[t] == row[t]:
+                    ok += 1
+                else:
+                    bad += 1
+                    if len(fails) < 3:
+                        fails.append(
+                            f"{base_name} vs {name} t={t}: {base[t]!r} vs {row[t]!r}"
+                        )
+    rep.add(
+        "additive groups agree on m=1",
+        bad == 0,
+        f"{ok} cells compared, {bad} disagree"
+        + ("  " + "; ".join(fails) if fails else ""),
+    )
+
+
 # --- solver-based ------------------------------------------------------------
 def check_theorem_2_2(solver, rep, m_max=20, t_max=30):
     """Theorem 2.2. If C(t,m) is even and 2^r || m, then EGZ(t, Z_2, m) = t + 2^r.
@@ -435,7 +627,7 @@ def main():
         print(f"no tables found in {args.tables}", file=sys.stderr)
         return 2
     print(
-        f"Verifying {len(tables)} tables in {args.tables} against the thesis results."
+        f"Verifying {len(tables)} tables in {args.tables} against the thesis and the literature."
     )
 
     rep = Report()
@@ -448,6 +640,11 @@ def main():
     check_propositions_4_1_4_2(tables, rep)
     check_theorem_3_9(tables, rep)
     check_theorem_3_8(tables, rep)
+    check_caro_schmitt_mod3(tables, rep)
+    check_egz_constants(tables, rep)
+    check_gao_davenport(tables, rep)
+    check_davenport_lower(tables, rep)
+    check_additive_agreement(tables, rep)
     if args.solver:
         check_theorem_2_2(args.solver, rep)
     rep.show()
