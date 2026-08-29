@@ -61,12 +61,29 @@ RINGS = {
     "EGZ_Z_9.tsv": dict(
         order=9, char=9, cyclic=9, t_limit=FLAT, additive=("Z_n", 9), dav=9
     ),
+    "EGZ_Z_10.tsv": dict(
+        order=10, char=10, cyclic=10, t_limit=FLAT, additive=("Z_n", 10), dav=10
+    ),
+    "EGZ_Z_11.tsv": dict(
+        order=11, char=11, cyclic=11, t_limit=FLAT, additive=("Z_n", 11), dav=11
+    ),
+    "EGZ_Z_12.tsv": dict(
+        order=12, char=12, cyclic=12, t_limit=FLAT, additive=("Z_n", 12), dav=12
+    ),
     # Elementary abelian of rank 3: order 8, characteristic 2 -- not Z_8.
     "EGZ_Z_2^3.tsv": dict(
         order=8, char=2, cyclic=None, t_limit=FLAT, additive=("Z_2^d", 3), dav=4
     ),
     # Elementary abelian of rank 2: order 9, characteristic 3 -- not Z_9.
     "EGZ_Z_3^2.tsv": dict(order=9, char=3, cyclic=None, t_limit=FLAT, additive=("Z_3^d", 2), dav=5),
+    # F_8 = Z_2[x]/(x^3+x+1): order 8, characteristic 2, additively Z_2^3.
+    "EGZ_Z_2x_by_x3+x+1.tsv": dict(
+        order=8, char=2, cyclic=None, t_limit=FLAT, additive=("Z_2^d", 3), dav=4
+    ),
+    # F_9 = Z_3[x]/(x^2+1): order 9, characteristic 3, additively Z_3^2.
+    "EGZ_Z_3x_by_x2+1.tsv": dict(
+        order=9, char=3, cyclic=None, t_limit=FLAT, additive=("Z_3^d", 2), dav=5
+    ),
     # 4-element rings of characteristic 2 -- not Z_4.
     "EGZ_Z_2^2.tsv": dict(
         order=4, char=2, cyclic=None, t_limit=FLAT, additive=("Z_2^d", 2), dav=3
